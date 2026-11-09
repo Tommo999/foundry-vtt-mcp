@@ -1,0 +1,30 @@
+{
+  "name": "foundry-vtt-mcp",
+  "version": "0.8.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @foundry-mcp/shared && npm run build --workspace @foundry-mcp/module && npm run build --workspace @foundry-mcp/companion",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && node scripts/package.mjs",
+    "package:windows": "npm run package && node scripts/package-windows.mjs",
+    "pretest": "npm run build --workspace @foundry-mcp/companion",
+    "format": "prettier --write \"packages/**/*.ts\" \"tests/**/*.ts\" \"scripts/*.mjs\" \"*.json\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

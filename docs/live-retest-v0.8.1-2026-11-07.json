@@ -1,0 +1,190 @@
+{
+  "release": "0.8.1",
+  "generatedAt": "2026-11-07T22:22:32.465684+10:30",
+  "status": "local release validated; affected live workflows pending deployment",
+  "automated": {
+    "command": "FOUNDRY_MCP_PWSH_PATH=/tmp/foundry-mcp-powershell/pwsh npm test",
+    "filesPassed": 30,
+    "testsPassed": 219,
+    "failed": 0,
+    "skipped": 0,
+    "typecheck": "pass",
+    "package": "pass",
+    "windowsPackage": "pass",
+    "realWindowsInstall": "not tested on Linux"
+  },
+  "oldBehaviorRegression": {
+    "method": "Isolated temporary copy: original encounter/inventory handlers restored; old overlapping search fields, nested-only level reader and ammo exclusion reconstructed. This is a behavior mutation check, not an untouched v0.8.0 checkout.",
+    "total": 58,
+    "passed": 47,
+    "expectedFailures": 11,
+    "failures": [
+      {
+        "file": "encounters.test.ts",
+        "test": "reports selected current combat as active even when its legacy flag is false"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "inspects native ammunition and legacy consumables while filtering nonphysical Items"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "adds native ammunition through PF2e inventory.add and preserves ammunition metadata"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "stacks native ammunition into a compatible PF2e stack and confirms both quantities"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "sets a positive quantity through the native item update"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "allows setting quantity above the current stack size"
+      },
+      {
+        "file": "pf2e-inventory.test.ts",
+        "test": "transfers ammunition partially and fully with native API and preserved metadata"
+      },
+      {
+        "file": "pf2e-read.test.ts",
+        "test": "loads compatible fields from a cold or warm index and finds Goblin Warrior"
+      },
+      {
+        "file": "pf2e-read.test.ts",
+        "test": "normalizes scalar values already present in a cached index"
+      },
+      {
+        "file": "pf2e-read.test.ts",
+        "test": "keeps good results when another eligible pack has a broken index"
+      },
+      {
+        "file": "pf2e-read.test.ts",
+        "test": "matches hazard complexity and equipment filters with normalized index values"
+      }
+    ]
+  },
+  "archives": [
+    {
+      "path": "dist/foundry-vtt-mcp.zip",
+      "integrity": "pass",
+      "version": "0.8.1",
+      "files": 3,
+      "bytes": 90494,
+      "sha256": "e88aa87fdfcf3c0650dda62d93cb38a5de0a35c928b14c8f3fc2d69d43e6accd"
+    },
+    {
+      "path": "dist/foundry-vtt-windows-setup.zip",
+      "integrity": "pass",
+      "version": "0.8.1",
+      "files": 45,
+      "bytes": 158177,
+      "sha256": "f24909f30bd67b0960940ce75a6e3423ecb86808278a6232d3c6ccff6738a24d"
+    }
+  ],
+  "connectionAndDeploymentGate": {
+    "checkedAt": "2026-11-07T11:51:11.614Z",
+    "serverInfo": {
+      "name": "foundry-vtt",
+      "version": "0.8.1"
+    },
+    "toolCount": 51,
+    "toolNames": [
+      "add_combatants",
+      "add_map_note",
+      "browse_assets",
+      "create_document",
+      "create_embedded",
+      "create_encounter",
+      "create_folder",
+      "discover_types",
+      "get_document",
+      "get_status",
+      "import_compendium",
+      "inspect_encounter",
+      "inspect_scene",
+      "list_compendiums",
+      "list_encounters",
+      "list_folders",
+      "move_document",
+      "next_turn",
+      "pf2e_add_coins",
+      "pf2e_add_inventory_item",
+      "pf2e_adjust_condition",
+      "pf2e_analyze_encounter",
+      "pf2e_apply_damage",
+      "pf2e_apply_effect",
+      "pf2e_combat_context",
+      "pf2e_create_loot",
+      "pf2e_import_document",
+      "pf2e_inspect_actions",
+      "pf2e_inspect_conditions",
+      "pf2e_inspect_damage_application",
+      "pf2e_inventory",
+      "pf2e_party_summary",
+      "pf2e_remove_effect",
+      "pf2e_roll_check",
+      "pf2e_roll_damage",
+      "pf2e_roll_initiative",
+      "pf2e_roll_strike",
+      "pf2e_search_compendium",
+      "pf2e_set_condition",
+      "pf2e_set_item_quantity",
+      "pf2e_stage_encounter",
+      "pf2e_status",
+      "pf2e_transfer_item",
+      "remove_combatants",
+      "search_compendium",
+      "search_content",
+      "search_world",
+      "session_snapshot",
+      "start_encounter",
+      "update_document",
+      "upload_asset"
+    ],
+    "calls": [
+      {
+        "name": "get_status",
+        "arguments": {},
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"ok\":true,\"data\":{\"connected\":true,\"world\":\"Glimmerkeep\",\"worldId\":\"glimmerkeep\",\"systemId\":\"pf2e\",\"systemVersion\":\"8.7.0\",\"foundryVersion\":\"14.363\",\"capabilities\":{\"encounterPreparation\":true,\"encounterExecution\":true,\"sessionSnapshot\":true},\"writeMode\":\"automatic\",\"recentOutcomes\":[{\"id\":\"aeb4ef68-89a5-4ae2-8484-a02f7ceb9e00\",\"tool\":\"pf2e_roll_damage\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:03.429Z\"},{\"id\":\"c42a36fe-88d1-4bfe-9486-53393fd0e5ab\",\"tool\":\"pf2e_inspect_damage_application\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:03.527Z\"},{\"id\":\"44d75711-2b62-4e76-8b6e-e8f51a8baf99\",\"tool\":\"update_document\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:03.941Z\"},{\"id\":\"dfb53020-f4ca-4a8b-87d7-57be9ed0bc7b\",\"tool\":\"pf2e_apply_damage\",\"outcome\":\"STALE_REVIEW\",\"at\":\"2026-11-07T11:05:09.465Z\"},{\"id\":\"2fa26b10-d1ca-432e-951c-63d55e4104f4\",\"tool\":\"pf2e_inspect_damage_application\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:09.583Z\"},{\"id\":\"996caab2-798f-434b-848f-3819767cd1db\",\"tool\":\"pf2e_apply_damage\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:13.712Z\"},{\"id\":\"c9e2c16e-3e1b-49e2-b906-8caac07960bd\",\"tool\":\"get_status\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:05:13.803Z\"},{\"id\":\"5cfa5249-761d-4904-ac84-31425e7b6960\",\"tool\":\"pf2e_inventory\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:07:12.624Z\"},{\"id\":\"2d0118d5-21d1-4351-b00b-52f2b41559ed\",\"tool\":\"pf2e_add_inventory_item\",\"outcome\":\"PF2E_UNSUPPORTED_ITEM\",\"at\":\"2026-11-07T11:07:13.760Z\"},{\"id\":\"cc60c03d-86c6-4749-b50d-fc419602f5a0\",\"tool\":\"update_document\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:07:14.079Z\"},{\"id\":\"fd175b0f-d682-4c00-8231-03411e779542\",\"tool\":\"update_document\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:07:14.225Z\"},{\"id\":\"8b347d0f-b2ca-4c2e-8adf-c55c195023d6\",\"tool\":\"move_document\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:07:14.714Z\"},{\"id\":\"ff1c0644-ac22-47aa-a6a6-26486043e87f\",\"tool\":\"add_combatants\",\"outcome\":\"ENCOUNTER_STARTED\",\"at\":\"2026-11-07T11:07:14.754Z\"},{\"id\":\"be51c65d-cb43-45a4-b2ab-92e7fbc33f2a\",\"tool\":\"update_document\",\"outcome\":\"OPERATION_FAILED\",\"at\":\"2026-11-07T11:07:14.794Z\"},{\"id\":\"df12019b-3282-47de-a5ae-c070e6409fdf\",\"tool\":\"pf2e_inspect_damage_application\",\"outcome\":\"INVALID_SHIELD\",\"at\":\"2026-11-07T11:07:14.848Z\"},{\"id\":\"1831780d-9143-4dcf-8741-f34e839141c2\",\"tool\":\"get_status\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:16:52.468Z\"},{\"id\":\"ff7795c9-387d-4336-b2c2-18ec440177ed\",\"tool\":\"search_compendium\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:18:48.830Z\"},{\"id\":\"e387654a-4c1c-4b7d-ac6c-9633f91547bd\",\"tool\":\"pf2e_search_compendium\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:18:48.882Z\"},{\"id\":\"c077adbe-caa0-47b4-9bce-ab241d36eaee\",\"tool\":\"get_document\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:18:49.188Z\"},{\"id\":\"1b705372-de70-458a-9a7f-3d5779dae480\",\"tool\":\"get_status\",\"outcome\":\"success\",\"at\":\"2026-11-07T11:28:41.442Z\"}],\"assetRoot\":\"assets/foundry-mcp\",\"maxAssetBytes\":8388608,\"pf2eAdapter\":{\"available\":true,\"detected\":true,\"systemId\":\"pf2e\",\"version\":\"8.7.0\",\"enabled\":true,\"capabilities\":{\"compendiumSearch\":true,\"partySummary\":true,\"encounterAnalysis\":true},\"tools\":{\"conditionsAndEffects\":true,\"inventory\":true,\"checksAndActions\":true,\"combatContext\":true,\"strikesAndDamage\":true,\"damageApplication\":true,\"initiative\":true},\"note\":\"Individual actor and native API support is checked when each PF2e tool runs.\"}}}"
+            }
+          ],
+          "isError": false
+        }
+      }
+    ],
+    "deploymentGate": {
+      "installedModuleVersion": "unverified",
+      "runningDaemonVersion": "unverified",
+      "browserAccess": "unavailable",
+      "affectedLiveRetest": "pending",
+      "worldMutations": 0
+    }
+  },
+  "pendingLiveChecks": [
+    "Install module 0.8.1, restart companion from updated checkout, hard-refresh GM browser, verify both running builds.",
+    "Exact Goblin Warrior filtered query with explicit pack and unrestricted packs; hazard complexity, supported sizes, equipment price/type/level and ammo filters.",
+    "Inactive preparation versus actual current and started-unselected combat reporting; safe isolated start/next results.",
+    "Native ammo inspection, new-stack add, compatible stacking, positive quantity updates, partial/full native transfers and metadata/source preservation.",
+    "Freshly inspected stale-turn, duplicate-damage and stale-review guards without clearing ledgers or replaying historical writes."
+  ],
+  "browserProbe": {
+    "apps": [],
+    "browsers": [],
+    "errors": [
+      "Browsers: Error: The browser access host is unavailable"
+    ]
+  },
+  "worldMutations": 0,
+  "newWorldFixtures": [],
+  "cleanup": "No new world artifacts. Historical acceptance fixtures and six successful damage records were not changed by this run; inspect current state before any future test or cleanup.",
+  "historicalEvidence": [
+    "docs/live-acceptance-2026-11-07.md",
+    "docs/live-acceptance-2026-11-07.json"
+  ]
+}

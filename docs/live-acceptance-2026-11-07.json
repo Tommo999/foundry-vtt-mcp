@@ -1,0 +1,2772 @@
+{
+  "date": "2026-11-07",
+  "timezone": "Australia/Adelaide",
+  "world": "Glimmerkeep",
+  "foundryVersion": "14.363",
+  "pf2eVersion": "8.7.0",
+  "release": "0.8.0",
+  "automated": {
+    "testsPassed": 196,
+    "filesPassed": 27,
+    "typecheck": "passed"
+  },
+  "summary": {
+    "tools": 51,
+    "pass": 45,
+    "passWithFinding": 5,
+    "fail": 1,
+    "calls": 134
+  },
+  "findings": [
+    {
+      "tool": "pf2e_search_compendium",
+      "severity": "failure",
+      "detail": "Returns zero creature matches and Cannot create property 'value' on number '1' index warnings, while generic search finds Goblin Warrior in the same pack."
+    },
+    {
+      "tool": "inspect_encounter/start_encounter/next_turn",
+      "severity": "warning",
+      "detail": "Encounter summaries report active:false for the active started test combat; combat context correctly reports active:true."
+    },
+    {
+      "tool": "pf2e_inventory/pf2e_add_inventory_item",
+      "severity": "compatibility warning",
+      "detail": "PF2e 8.7.0 ammo items (Arrows) are omitted from inventory results and rejected as unsupported when added, although present on the native imported actor."
+    }
+  ],
+  "perTool": [
+    {
+      "tool": "add_combatants",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "add_map_note",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "browse_assets",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "create_document",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "create_embedded",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "create_encounter",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "create_folder",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "discover_types",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "get_document",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "get_status",
+      "status": "PASS",
+      "calls": 4,
+      "successfulResponses": 4
+    },
+    {
+      "tool": "import_compendium",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "inspect_encounter",
+      "status": "PASS WITH FINDING",
+      "calls": 3,
+      "successfulResponses": 3
+    },
+    {
+      "tool": "inspect_scene",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "list_compendiums",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "list_encounters",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "list_folders",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "move_document",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 3
+    },
+    {
+      "tool": "next_turn",
+      "status": "PASS WITH FINDING",
+      "calls": 2,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_add_coins",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_add_inventory_item",
+      "status": "PASS WITH FINDING",
+      "calls": 3,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_adjust_condition",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 3
+    },
+    {
+      "tool": "pf2e_analyze_encounter",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "status": "PASS",
+      "calls": 8,
+      "successfulResponses": 6
+    },
+    {
+      "tool": "pf2e_apply_effect",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_combat_context",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_create_loot",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_import_document",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_inspect_actions",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_inspect_conditions",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "status": "PASS",
+      "calls": 9,
+      "successfulResponses": 8
+    },
+    {
+      "tool": "pf2e_inventory",
+      "status": "PASS WITH FINDING",
+      "calls": 2,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_party_summary",
+      "status": "PASS",
+      "calls": 2,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_remove_effect",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "status": "PASS",
+      "calls": 5,
+      "successfulResponses": 5
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "status": "PASS",
+      "calls": 6,
+      "successfulResponses": 6
+    },
+    {
+      "tool": "pf2e_roll_initiative",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_roll_strike",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 3
+    },
+    {
+      "tool": "pf2e_search_compendium",
+      "status": "FAIL",
+      "calls": 3,
+      "successfulResponses": 2
+    },
+    {
+      "tool": "pf2e_set_condition",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_set_item_quantity",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_stage_encounter",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_status",
+      "status": "PASS",
+      "calls": 3,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "pf2e_transfer_item",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "remove_combatants",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "search_compendium",
+      "status": "PASS",
+      "calls": 10,
+      "successfulResponses": 9
+    },
+    {
+      "tool": "search_content",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "search_world",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "session_snapshot",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "start_encounter",
+      "status": "PASS WITH FINDING",
+      "calls": 1,
+      "successfulResponses": 1
+    },
+    {
+      "tool": "update_document",
+      "status": "PASS",
+      "calls": 13,
+      "successfulResponses": 11
+    },
+    {
+      "tool": "upload_asset",
+      "status": "PASS",
+      "calls": 1,
+      "successfulResponses": 1
+    }
+  ],
+  "fixtures": {
+    "journal": "JournalEntry.ZvoDbWrrV5BWtOQC",
+    "scene": "Scene.J6MzumtLUwDPMK5z",
+    "page": "JournalEntry.ZvoDbWrrV5BWtOQC.JournalEntryPage.p0ofJUdDkp5tAvfz",
+    "actorFolder": "Folder.4Aqqi534MLRCChZh",
+    "creatureSource": "Compendium.pf2e.pathfinder-monster-core.Actor.fLLKuOXwPq1Iq0U4",
+    "weaponSource": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z",
+    "actorA": "Actor.05H2LvFPer0rbsJc",
+    "actorB": "Actor.6zOiQpI9EeMLx3Lt",
+    "genericItem": "Item.WO3hlVhRPbGVR6Kt",
+    "asset": {
+      "path": "assets/foundry-mcp/acceptance/Be9fPJcT9fgMmMNo-mcp-acceptance-2026-11-07.png",
+      "filename": "Be9fPJcT9fgMmMNo-mcp-acceptance-2026-11-07.png",
+      "mimeType": "image/png",
+      "size": 68,
+      "maxSize": 8388608
+    },
+    "loot": "Actor.O7wmqBzoenWFou65",
+    "condition": "Actor.05H2LvFPer0rbsJc.Item.2VT5jclQlJFcwNKU",
+    "inventoryItem": "Actor.05H2LvFPer0rbsJc.Item.uHk7Qy38WoiaTXMe",
+    "note": "Scene.J6MzumtLUwDPMK5z.Note.BYPKojRta1OgBgCC",
+    "effect": "Actor.05H2LvFPer0rbsJc.Item.14VsSXItoR1HBjSp",
+    "tokens": [
+      "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+      "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+    ],
+    "stagedActors": [
+      "Actor.3CjdDmRxzqwRguPk"
+    ],
+    "encounter": "Combat.DyLIFuON9aWdqd57",
+    "combatants": [
+      "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+      "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD"
+    ],
+    "damageMessage": "ChatMessage.GWIlD07KN5Kv7Svq",
+    "damageTarget": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+    "healingMessage": "ChatMessage.BzuQZIzPINyjl6ag",
+    "shield": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+    "shieldEffect": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.ivW0nmzuZfqv70Tb",
+    "resistanceEffect": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.LjqLBAaDx0uDBCYt",
+    "shieldDamageMessage": "ChatMessage.pWbddV2o8kMHJTUV"
+  },
+  "chatMessages": [
+    "ChatMessage.6OeLS1lJD9r1efpJ",
+    "ChatMessage.PIksp33ziOLseznb",
+    "ChatMessage.nhKHTuO6Vbaf7llN",
+    "ChatMessage.5t9eePJv62KGFsEX",
+    "ChatMessage.qwT6pr7PFhLdayGu",
+    "ChatMessage.e0LXI654u66tfX2q",
+    "ChatMessage.GWnXol8NFJRzOG66",
+    "ChatMessage.9SiZczd0WkJKfzqQ",
+    "ChatMessage.qGPTYqfNvMVsxmpH",
+    "ChatMessage.WMPKX1ggSS8wZTqr",
+    "ChatMessage.GWIlD07KN5Kv7Svq",
+    "ChatMessage.7llhI3zfO6EiT120",
+    "ChatMessage.BzuQZIzPINyjl6ag",
+    "ChatMessage.iDvJK5DYHS9vi548",
+    "ChatMessage.pWbddV2o8kMHJTUV",
+    "ChatMessage.qaqLaPWeb1RRmKa6",
+    "ChatMessage.wihSr8pZQf9P77tI",
+    "ChatMessage.ZO0vTO30z6jb1K8Y",
+    "ChatMessage.xqZN1BUJC19LLQ1Y",
+    "ChatMessage.hZhwBZG5N8kLu2fT",
+    "ChatMessage.WRtiFIdKrDUUZzO9",
+    "ChatMessage.GeaODnYtjOuNsvPx"
+  ],
+  "applicationIds": [
+    "9924bd25-bdd9-459f-af6c-1e4f9380b459",
+    "c7011c28-3277-4763-97ec-37dac433f8f5",
+    "772fc82b-2421-4950-9831-1194aec8419e",
+    "3065c429-2edf-44fa-82bc-cb7451df16f1",
+    "40365f72-001c-42ce-9605-b6ced42bf95a",
+    "a94360e2-d8c7-46a0-a74f-542894b55e56"
+  ],
+  "calls": [
+    {
+      "tool": "get_status",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "discover_types",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "list_folders",
+      "args": {
+        "limit": 5
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "search_world",
+      "args": {
+        "documentType": "Scene",
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 2,
+        "results": [
+          {
+            "uuid": "Scene.NUEDEFAULTSCENE0",
+            "name": "Foundry Virtual Tabletop"
+          },
+          {
+            "uuid": "Scene.J6MzumtLUwDPMK5z",
+            "name": "[MCP TEST] Scene — Updated"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "list_compendiums",
+      "args": {
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 100,
+        "results": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ]
+      }
+    },
+    {
+      "tool": "pf2e_status",
+      "args": {},
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "pf2e_party_summary",
+      "args": {},
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "list_encounters",
+      "args": {
+        "limit": 10
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "browse_assets",
+      "args": {
+        "limit": 5
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.equipment-srd",
+        "query": "Dagger",
+        "limit": 3
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "create_document",
+      "args": {
+        "documentType": "JournalEntry",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Journal"
+        }
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "get_status",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_status",
+      "args": {},
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "list_encounters",
+      "args": {
+        "limit": 10
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "list_folders",
+      "args": {
+        "limit": 5
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "pf2e_search_compendium",
+      "args": {
+        "kind": "creature",
+        "query": "Goblin Warrior",
+        "limit": 3
+      },
+      "ok": false,
+      "error": {
+        "code": "COMPANION_UNAVAILABLE",
+        "message": "Unsupported tool"
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.equipment-srd",
+        "query": "Dagger",
+        "limit": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 11,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.1S3RgLWa1DBitB9V",
+            "name": "Dagger of Eternal Sleep"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.BPQRgrJwr5GuT00g",
+            "name": "Dagger Pistol"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.FCoziiYnBoRJFVaM",
+            "name": "Rounds (Dagger Pistol)"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "create_document",
+      "args": {
+        "documentType": "JournalEntry",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Journal"
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC"
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.equipment-srd",
+        "query": "Dagger",
+        "offset": 3,
+        "limit": 8
+      },
+      "ok": true,
+      "evidence": {
+        "total": 11,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.UGqhitKOWCsqs9UQ",
+            "name": "Bellicose Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.VHJM3jYtpzMqZ1wc",
+            "name": "Ceremonial dagger with onyx hilt"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.ZvIEJCY60fHqzl6r",
+            "name": "Serpent Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.hK5xPjOFd2hb81mi",
+            "name": "Poisonous Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.kJJvKm80KwWXPukV",
+            "name": "Clan Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z",
+            "name": "Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.sAjzLXgA2LnIwpBM",
+            "name": "Orc Knuckle Dagger"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.ts5z3xR9j48Cic5H",
+            "name": "Spectral Dagger"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Journal — Verified"
+        }
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "create_embedded",
+      "args": {
+        "parentUuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+        "documentType": "JournalEntryPage",
+        "data": {
+          "name": "Acceptance checks",
+          "type": "text",
+          "text": {
+            "content": "<p>MCP acceptance test fixture. Safe to delete after testing.</p>"
+          }
+        }
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "get_document",
+      "args": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC"
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "import_compendium",
+      "args": {
+        "uuid": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z"
+      },
+      "ok": false,
+      "error": {
+        "code": "DISCONNECTED",
+        "message": "Open the GM Foundry browser and connect the module."
+      }
+    },
+    {
+      "tool": "get_status",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "list_encounters",
+      "args": {
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0
+      }
+    },
+    {
+      "tool": "pf2e_status",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "session_snapshot",
+      "args": {},
+      "ok": true,
+      "evidence": {
+        "warnings": []
+      }
+    },
+    {
+      "tool": "search_content",
+      "args": {
+        "query": "MCP ACCEPTANCE",
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1,
+        "results": [
+          {
+            "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+            "name": "[MCP ACCEPTANCE 2026-11-07] Journal"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "pf2e_party_summary",
+      "args": {},
+      "ok": true,
+      "evidence": {
+        "count": 0,
+        "warnings": []
+      }
+    },
+    {
+      "tool": "list_folders",
+      "args": {
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 11,
+        "results": [
+          {
+            "uuid": "Folder.9v5j5nMATo1ehDtu",
+            "name": "Adventure Paths"
+          },
+          {
+            "uuid": "Folder.bHnipnDX3VcHNeaH",
+            "name": "Bestiaries"
+          },
+          {
+            "uuid": "Folder.abwTimvCJSNX4Clc",
+            "name": "Character Building"
+          },
+          {
+            "uuid": "Folder.2s0sgWaum6J4LUO8",
+            "name": "Effects"
+          },
+          {
+            "uuid": "Folder.JS4XtH48az5QxWli",
+            "name": "GM Tools"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "browse_assets",
+      "args": {
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0
+      }
+    },
+    {
+      "tool": "pf2e_search_compendium",
+      "args": {
+        "kind": "creature",
+        "query": "Orc Warrior",
+        "limit": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0,
+        "warnings": [
+          "Could not read pack pf2e.abomination-vaults-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.age-of-ashes-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.agents-of-edgewatch-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.battlecry-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.book-of-the-dead-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.blood-lords-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.blog-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.claws-of-the-tyrant-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.curtain-call-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.dawn-of-the-frogs: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.extinction-curse-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.fall-of-plaguestone-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.fists-of-the-ruby-phoenix-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.hazards: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.howl-of-the-wild-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.gatewalkers-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.hellbreakers-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.hells-destiny-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.bastion-of-blasphemies-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.vaultlines-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.lost-omens-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.malevolence-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.menace-under-otari-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.npc-gallery: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.one-shot-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.outlaws-of-alkenstar-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.kingmaker-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-bestiary-2: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-bestiary-3: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-monster-core: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-monster-core-2: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-npc-core: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pathfinder-dark-archive: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-introductions-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-1-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-2-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-3-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-4-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-5-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-6-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.pfs-season-7-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.prey-for-death-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.quest-for-the-frozen-flame-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.revenge-of-the-runelords-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.rusthenge-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.season-of-ghosts-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.seven-dooms-for-sandpoint-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.shadows-at-sundown-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.sky-kings-tomb-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.spore-war-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.strength-of-thousands-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.the-dead-gods-hand-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.the-enmity-cycle-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.the-slithering-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.triumph-of-the-tusk-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.troubles-in-otari-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.troubles-in-grayce-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.myth-speaker-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.night-of-the-gray-death-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.crown-of-the-kobold-king-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.shades-of-blood-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.stolen-fate-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.rage-of-elements-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.wardens-of-wildwood-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.war-of-immortals-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.feybound-bestiary: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.vehicles: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.iconics: Cannot create property 'value' on number '1'",
+          "Could not read pack pf2e.paizo-pregens: Cannot create property 'value' on number '1'"
+        ],
+        "results": []
+      }
+    },
+    {
+      "tool": "get_document",
+      "args": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Journal — Verified"
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "JournalEntry.ZvoDbWrrV5BWtOQC"
+      }
+    },
+    {
+      "tool": "create_embedded",
+      "args": {
+        "parentUuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+        "documentType": "JournalEntryPage",
+        "data": {
+          "name": "Acceptance checks",
+          "type": "text",
+          "text": {
+            "content": "<p>MCP acceptance fixture. Safe to delete after testing.</p>"
+          }
+        }
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.pathfinder-monster-core",
+        "query": "Goblin Warrior",
+        "limit": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.pathfinder-monster-core.Actor.fLLKuOXwPq1Iq0U4",
+            "name": "Goblin Warrior"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "create_folder",
+      "args": {
+        "name": "[MCP ACCEPTANCE 2026-11-07] Actors",
+        "documentType": "Actor"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Folder.4Aqqi534MLRCChZh"
+      }
+    },
+    {
+      "tool": "inspect_scene",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z"
+      }
+    },
+    {
+      "tool": "pf2e_import_document",
+      "args": {
+        "uuid": "Compendium.pf2e.pathfinder-monster-core.Actor.fLLKuOXwPq1Iq0U4",
+        "folderUuid": "Folder.4Aqqi534MLRCChZh",
+        "adjustment": "normal"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Actor.05H2LvFPer0rbsJc",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Attacker",
+          "system": {
+            "attributes": {
+              "hp": {
+                "value": 60,
+                "max": 60
+              }
+            }
+          }
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_import_document",
+      "args": {
+        "uuid": "Compendium.pf2e.pathfinder-monster-core.Actor.fLLKuOXwPq1Iq0U4",
+        "folderUuid": "Folder.4Aqqi534MLRCChZh",
+        "adjustment": "weak"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.6zOiQpI9EeMLx3Lt"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Actor.6zOiQpI9EeMLx3Lt",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Target",
+          "system": {
+            "attributes": {
+              "hp": {
+                "value": 60,
+                "max": 60
+              }
+            }
+          }
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.6zOiQpI9EeMLx3Lt"
+      }
+    },
+    {
+      "tool": "import_compendium",
+      "args": {
+        "uuid": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Item.WO3hlVhRPbGVR6Kt"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Item.WO3hlVhRPbGVR6Kt",
+        "data": {
+          "name": "[MCP ACCEPTANCE 2026-11-07] Generic Dagger"
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Item.WO3hlVhRPbGVR6Kt"
+      }
+    },
+    {
+      "tool": "add_map_note",
+      "args": {
+        "sceneUuid": "Scene.J6MzumtLUwDPMK5z",
+        "journalUuid": "JournalEntry.ZvoDbWrrV5BWtOQC",
+        "pageUuid": "JournalEntry.ZvoDbWrrV5BWtOQC.JournalEntryPage.p0ofJUdDkp5tAvfz",
+        "x": 1100,
+        "y": 1100,
+        "label": "MCP acceptance fixture"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "upload_asset",
+      "args": {
+        "filename": "mcp-acceptance-2026-11-07.png",
+        "directory": "acceptance",
+        "mimeType": "image/png",
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jBzQAAAAASUVORK5CYII="
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_inspect_conditions",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_inventory",
+      "args": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "limit": 25
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "total": 3
+      }
+    },
+    {
+      "tool": "pf2e_inspect_actions",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_analyze_encounter",
+      "args": {
+        "participants": [
+          {
+            "uuid": "Actor.05H2LvFPer0rbsJc"
+          },
+          {
+            "uuid": "Actor.6zOiQpI9EeMLx3Lt"
+          }
+        ],
+        "partyLevel": 1,
+        "partySize": 4
+      },
+      "ok": true,
+      "evidence": {
+        "warnings": []
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.spell-effects",
+        "query": "Guidance",
+        "limit": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 2,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.spell-effects.Item.3LyOkV25p7wA181H",
+            "name": "Effect: Guidance Immunity"
+          },
+          {
+            "uuid": "Compendium.pf2e.spell-effects.Item.3qHKBDF7lrHw8jFK",
+            "name": "Spell Effect: Guidance"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "browse_assets",
+      "args": {
+        "directory": "assets/foundry-mcp/acceptance",
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1
+      }
+    },
+    {
+      "tool": "list_compendiums",
+      "args": {
+        "limit": 100
+      },
+      "ok": true,
+      "evidence": {
+        "total": 100,
+        "results": [
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {}
+        ]
+      }
+    },
+    {
+      "tool": "move_document",
+      "args": {
+        "uuid": "Actor.05H2LvFPer0rbsJc",
+        "folderUuid": null
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "move_document",
+      "args": {
+        "uuid": "Actor.05H2LvFPer0rbsJc",
+        "folderUuid": "Folder.4Aqqi534MLRCChZh"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_create_loot",
+      "args": {
+        "name": "[MCP ACCEPTANCE 2026-11-07] Loot",
+        "folderUuid": "Folder.4Aqqi534MLRCChZh",
+        "items": [
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z",
+            "quantity": 2
+          }
+        ],
+        "coins": {
+          "gp": 2
+        }
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_set_condition",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "slug": "frightened",
+        "value": 2
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_add_inventory_item",
+      "args": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "uuid": "Compendium.pf2e.equipment-srd.Item.rQWaJhI5Bko5x14Z",
+        "quantity": 2,
+        "newStack": true
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "itemUuid": "Actor.05H2LvFPer0rbsJc.Item.uHk7Qy38WoiaTXMe"
+      }
+    },
+    {
+      "tool": "pf2e_add_coins",
+      "args": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "coins": {
+          "gp": 3,
+          "sp": 2
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_adjust_condition",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "conditionUuid": "Actor.05H2LvFPer0rbsJc.Item.2VT5jclQlJFcwNKU",
+        "operation": "increase"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_adjust_condition",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "conditionUuid": "Actor.05H2LvFPer0rbsJc.Item.2VT5jclQlJFcwNKU",
+        "operation": "decrease"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_adjust_condition",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "conditionUuid": "Actor.05H2LvFPer0rbsJc.Item.2VT5jclQlJFcwNKU",
+        "operation": "remove"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_apply_effect",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "uuid": "Compendium.pf2e.spell-effects.Item.3qHKBDF7lrHw8jFK"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_conditions",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_remove_effect",
+      "args": {
+        "targetUuid": "Actor.05H2LvFPer0rbsJc",
+        "effectUuid": "Actor.05H2LvFPer0rbsJc.Item.14VsSXItoR1HBjSp"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_set_item_quantity",
+      "args": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "itemUuid": "Actor.05H2LvFPer0rbsJc.Item.uHk7Qy38WoiaTXMe",
+        "quantity": 3
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "itemUuid": "Actor.05H2LvFPer0rbsJc.Item.uHk7Qy38WoiaTXMe"
+      }
+    },
+    {
+      "tool": "pf2e_transfer_item",
+      "args": {
+        "sourceActorUuid": "Actor.05H2LvFPer0rbsJc",
+        "targetActorUuid": "Actor.O7wmqBzoenWFou65",
+        "itemUuid": "Actor.05H2LvFPer0rbsJc.Item.uHk7Qy38WoiaTXMe",
+        "quantity": 1,
+        "newStack": true
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Actor.05H2LvFPer0rbsJc",
+        "data": {
+          "system.attributes.hp.value": 50
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Actor.6zOiQpI9EeMLx3Lt",
+        "data": {
+          "system.attributes.hp.value": 50
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.6zOiQpI9EeMLx3Lt"
+      }
+    },
+    {
+      "tool": "pf2e_stage_encounter",
+      "args": {
+        "sceneUuid": "Scene.J6MzumtLUwDPMK5z",
+        "placements": [
+          {
+            "uuid": "Actor.05H2LvFPer0rbsJc",
+            "x": 600,
+            "y": 600,
+            "hidden": true
+          },
+          {
+            "uuid": "Actor.6zOiQpI9EeMLx3Lt",
+            "x": 700,
+            "y": 600,
+            "hidden": true
+          }
+        ]
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "statistic": "perception",
+        "dc": 15,
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "total": 12,
+        "messageUuid": "ChatMessage.6OeLS1lJD9r1efpJ"
+      }
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "statistic": "athletics",
+        "dc": 15,
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "total": 13,
+        "messageUuid": "ChatMessage.PIksp33ziOLseznb"
+      }
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "statistic": "fortitude",
+        "dc": 15,
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "total": 20,
+        "messageUuid": "ChatMessage.nhKHTuO6Vbaf7llN"
+      }
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "statistic": "reflex",
+        "dc": 15,
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "total": 11,
+        "messageUuid": "ChatMessage.5t9eePJv62KGFsEX"
+      }
+    },
+    {
+      "tool": "pf2e_roll_check",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "statistic": "will",
+        "dc": 15,
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "total": 13,
+        "messageUuid": "ChatMessage.qwT6pr7PFhLdayGu"
+      }
+    },
+    {
+      "tool": "create_encounter",
+      "args": {
+        "sceneUuid": "Scene.J6MzumtLUwDPMK5z"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "round": 0,
+        "turn": null,
+        "active": false
+      }
+    },
+    {
+      "tool": "add_combatants",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "tokenUuids": [
+          "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+          "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+        ]
+      },
+      "ok": true,
+      "evidence": {
+        "addedCombatantUuids": [
+          "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+          "Combat.DyLIFuON9aWdqd57.Combatant.6GjRuHPM4X4c3IKE"
+        ]
+      }
+    },
+    {
+      "tool": "inspect_encounter",
+      "args": {
+        "uuid": "Combat.DyLIFuON9aWdqd57"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "total": 2,
+        "round": 0,
+        "turn": null,
+        "active": false
+      }
+    },
+    {
+      "tool": "remove_combatants",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "combatantUuids": [
+          "Combat.DyLIFuON9aWdqd57.Combatant.6GjRuHPM4X4c3IKE"
+        ]
+      },
+      "ok": true,
+      "evidence": {
+        "removedCombatantUuids": [
+          "Combat.DyLIFuON9aWdqd57.Combatant.6GjRuHPM4X4c3IKE"
+        ]
+      }
+    },
+    {
+      "tool": "add_combatants",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "tokenUuids": [
+          "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+          "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+        ]
+      },
+      "ok": true,
+      "evidence": {
+        "addedCombatantUuids": [
+          "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD"
+        ]
+      }
+    },
+    {
+      "tool": "inspect_encounter",
+      "args": {
+        "uuid": "Combat.DyLIFuON9aWdqd57"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "total": 2,
+        "round": 0,
+        "turn": null,
+        "active": false
+      }
+    },
+    {
+      "tool": "pf2e_roll_initiative",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "combatantUuids": [
+          "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+          "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD"
+        ],
+        "messageMode": "gm"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "inspect_encounter",
+      "args": {
+        "uuid": "Combat.DyLIFuON9aWdqd57"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "total": 2,
+        "round": 0,
+        "turn": null,
+        "active": false
+      }
+    },
+    {
+      "tool": "start_encounter",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "round": 1,
+        "turn": 0,
+        "active": false
+      }
+    },
+    {
+      "tool": "pf2e_combat_context",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "warnings": []
+      }
+    },
+    {
+      "tool": "pf2e_roll_strike",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+        "attackNumber": 1
+      },
+      "ok": true,
+      "evidence": {
+        "total": 16,
+        "chatMessageUuid": "ChatMessage.9SiZczd0WkJKfzqQ"
+      }
+    },
+    {
+      "tool": "pf2e_roll_strike",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+        "attackNumber": 2
+      },
+      "ok": true,
+      "evidence": {
+        "total": 10,
+        "chatMessageUuid": "ChatMessage.qGPTYqfNvMVsxmpH"
+      }
+    },
+    {
+      "tool": "pf2e_roll_strike",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+        "attackNumber": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 15,
+        "chatMessageUuid": "ChatMessage.WMPKX1ggSS8wZTqr"
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+        "critical": false
+      },
+      "ok": true,
+      "evidence": {
+        "total": 3,
+        "chatMessageUuid": "ChatMessage.GWIlD07KN5Kv7Svq"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.GWIlD07KN5Kv7Svq",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.GWIlD07KN5Kv7Svq",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk",
+        "applicationId": "9924bd25-bdd9-459f-af6c-1e4f9380b459",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 0
+            },
+            "stamina": null
+          },
+          "shield": null,
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 47,
+              "max": 60,
+              "temp": 0
+            },
+            "stamina": null
+          },
+          "shield": null,
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": -3,
+          "tempHp": 0,
+          "stamina": null,
+          "shieldHp": null,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.7llhI3zfO6EiT120"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.GWIlD07KN5Kv7Svq",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.GWIlD07KN5Kv7Svq",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "reviewToken": "[omitted]"
+      },
+      "ok": false,
+      "error": {
+        "code": "ALREADY_APPLIED",
+        "message": "This source roll was already applied to this Actor.",
+        "partial": {
+          "applicationId": "9924bd25-bdd9-459f-af6c-1e4f9380b459",
+          "status": "applied",
+          "sourceMessageUuid": "ChatMessage.GWIlD07KN5Kv7Svq",
+          "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk"
+        }
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e",
+        "critical": true
+      },
+      "ok": true,
+      "evidence": {
+        "total": 12,
+        "chatMessageUuid": "ChatMessage.BzuQZIzPINyjl6ag"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.BzuQZIzPINyjl6ag",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "operation": "healing"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.BzuQZIzPINyjl6ag",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "operation": "healing",
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk",
+        "applicationId": "c7011c28-3277-4763-97ec-37dac433f8f5",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 47,
+              "max": 60,
+              "temp": 0
+            },
+            "stamina": null
+          },
+          "shield": null,
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 59,
+              "max": 60,
+              "temp": 0
+            },
+            "stamina": null
+          },
+          "shield": null,
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": 12,
+          "tempHp": 0,
+          "stamina": null,
+          "shieldHp": null,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.iDvJK5DYHS9vi548"
+      }
+    },
+    {
+      "tool": "next_turn",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Combat.DyLIFuON9aWdqd57",
+        "round": 1,
+        "turn": 1,
+        "active": false
+      }
+    },
+    {
+      "tool": "next_turn",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "expectedRound": 1,
+        "expectedTurn": 0,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.gSnWSnfEBbq5qA2e"
+      },
+      "ok": false,
+      "error": {
+        "code": "STALE_TURN",
+        "message": "Encounter state changed. Inspect the tracker and retry with its current round, turn, and combatant."
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.other-effects",
+        "query": "Raise a Shield",
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0,
+        "results": []
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.equipment-srd",
+        "query": "Wooden Shield",
+        "limit": 5
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.equipment-srd.Item.ezVp13Uw8cWW08Da",
+            "name": "Wooden Shield"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "pf2e_combat_context",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57"
+      },
+      "ok": true,
+      "evidence": {
+        "warnings": []
+      }
+    },
+    {
+      "tool": "pf2e_search_compendium",
+      "args": {
+        "kind": "creature",
+        "pack": "pf2e.pathfinder-monster-core",
+        "query": "Goblin Warrior",
+        "limit": 3
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0,
+        "warnings": [
+          "Could not read pack pf2e.pathfinder-monster-core: Cannot create property 'value' on number '1'"
+        ],
+        "results": []
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.equipment-effects",
+        "query": "Raise",
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 2,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.equipment-effects.Item.2YgXoHvJfrDHucMr",
+            "name": "Effect: Raise a Shield"
+          },
+          {
+            "uuid": "Compendium.pf2e.equipment-effects.Item.DKCoW3A6Tz799Uq9",
+            "name": "Effect: Raise Jar"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.feat-effects",
+        "query": "Raise",
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 3,
+        "results": [
+          {
+            "uuid": "Compendium.pf2e.feat-effects.Item.A6i55HQ59lzsHXVQ",
+            "name": "Effect: Raise Symbol"
+          },
+          {
+            "uuid": "Compendium.pf2e.feat-effects.Item.AggnVD5loQHLb7zj",
+            "name": "Effect: Raise Menhir"
+          },
+          {
+            "uuid": "Compendium.pf2e.feat-effects.Item.dn7P5RzMZugxiWri",
+            "name": "Effect: Raise the Walls"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "search_compendium",
+      "args": {
+        "pack": "pf2e.spell-effects",
+        "query": "Raise",
+        "limit": 10
+      },
+      "ok": true,
+      "evidence": {
+        "total": 0,
+        "results": []
+      }
+    },
+    {
+      "tool": "pf2e_add_inventory_item",
+      "args": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "uuid": "Compendium.pf2e.equipment-srd.Item.ezVp13Uw8cWW08Da",
+        "quantity": 1,
+        "newStack": true
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "itemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+        "data": {
+          "system.equipped.carryType": "held",
+          "system.equipped.handsHeld": 1
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      }
+    },
+    {
+      "tool": "pf2e_apply_effect",
+      "args": {
+        "targetUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "uuid": "Compendium.pf2e.equipment-effects.Item.2YgXoHvJfrDHucMr"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "create_embedded",
+      "args": {
+        "parentUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "documentType": "Item",
+        "data": {
+          "name": "[MCP ACCEPTANCE] Slashing resistance 2",
+          "type": "effect",
+          "system": {
+            "rules": [
+              {
+                "key": "Resistance",
+                "type": "slashing",
+                "value": 2
+              }
+            ],
+            "duration": {
+              "value": -1,
+              "unit": "unlimited",
+              "expiry": null,
+              "sustained": false
+            }
+          }
+        }
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "data": {
+          "system.attributes.hp.temp": 3
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 1,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD",
+        "critical": true
+      },
+      "ok": true,
+      "evidence": {
+        "total": 4,
+        "chatMessageUuid": "ChatMessage.pWbddV2o8kMHJTUV"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.pWbddV2o8kMHJTUV",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.pWbddV2o8kMHJTUV",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "applicationId": "772fc82b-2421-4950-9831-1194aec8419e",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": 0,
+          "tempHp": 0,
+          "stamina": null,
+          "shieldHp": 0,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.qaqLaPWeb1RRmKa6"
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 1,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD",
+        "critical": false
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1,
+        "chatMessageUuid": "ChatMessage.wihSr8pZQf9P77tI"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.wihSr8pZQf9P77tI",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "multiplier": 0.5
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.wihSr8pZQf9P77tI",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "multiplier": 0.5,
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "applicationId": "3065c429-2edf-44fa-82bc-cb7451df16f1",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": 0,
+          "tempHp": 0,
+          "stamina": null,
+          "shieldHp": 0,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.ZO0vTO30z6jb1K8Y"
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "strikeIndex": 0,
+        "strikeSlug": "dogslicer",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk.Item.CnmgzGmi2Avq67QA",
+        "expectedRound": 1,
+        "expectedTurn": 1,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD",
+        "critical": false
+      },
+      "ok": true,
+      "evidence": {
+        "total": 1,
+        "chatMessageUuid": "ChatMessage.xqZN1BUJC19LLQ1Y"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.xqZN1BUJC19LLQ1Y",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "multiplier": 2
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.xqZN1BUJC19LLQ1Y",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "multiplier": 2,
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "applicationId": "40365f72-001c-42ce-9605-b6ced42bf95a",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 3
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": 0,
+          "tempHp": 0,
+          "stamina": null,
+          "shieldHp": 0,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.hZhwBZG5N8kLu2fT"
+      }
+    },
+    {
+      "tool": "pf2e_roll_damage",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "attackerTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "strikeIndex": 1,
+        "strikeSlug": "shortbow",
+        "strikeItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ.Actor.3CjdDmRxzqwRguPk.Item.4EXgRMqNIRLXxB1c",
+        "expectedRound": 1,
+        "expectedTurn": 1,
+        "expectedCombatantUuid": "Combat.DyLIFuON9aWdqd57.Combatant.7IsUJSPr7lh2FoaD",
+        "critical": true
+      },
+      "ok": true,
+      "evidence": {
+        "total": 22,
+        "chatMessageUuid": "ChatMessage.WRtiFIdKrDUUZzO9"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.WRtiFIdKrDUUZzO9",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "data": {
+          "system.attributes.hp.temp": 4
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc"
+      }
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.WRtiFIdKrDUUZzO9",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+        "reviewToken": "[omitted]"
+      },
+      "ok": false,
+      "error": {
+        "code": "STALE_REVIEW",
+        "message": "The damage review is stale. Inspect the damage again before applying it."
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.WRtiFIdKrDUUZzO9",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      },
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_apply_damage",
+      "args": {
+        "messageUuid": "ChatMessage.WRtiFIdKrDUUZzO9",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+        "reviewToken": "[omitted]"
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc",
+        "applicationId": "a94360e2-d8c7-46a0-a74f-542894b55e56",
+        "nativeConfirmed": true,
+        "ledgerStatus": "applied",
+        "before": {
+          "health": {
+            "hp": {
+              "value": 50,
+              "max": 60,
+              "temp": 4
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": true,
+            "broken": false,
+            "destroyed": false,
+            "hp": 12,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "after": {
+          "health": {
+            "hp": {
+              "value": 35,
+              "max": 60,
+              "temp": 0
+            },
+            "stamina": null
+          },
+          "shield": {
+            "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg",
+            "name": "Wooden Shield",
+            "itemId": "TRH5ULVev49YTgHg",
+            "raised": false,
+            "broken": false,
+            "destroyed": true,
+            "hp": 0,
+            "max": 12,
+            "hardness": 3
+          },
+          "conditionIds": []
+        },
+        "changes": {
+          "hp": -15,
+          "tempHp": -4,
+          "stamina": null,
+          "shieldHp": -12,
+          "conditionsAdded": [],
+          "conditionsRemoved": []
+        },
+        "nativeChatMessageUuid": "ChatMessage.GeaODnYtjOuNsvPx"
+      }
+    },
+    {
+      "tool": "get_status",
+      "args": {},
+      "ok": true,
+      "evidence": {}
+    },
+    {
+      "tool": "pf2e_inventory",
+      "args": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "limit": 100
+      },
+      "ok": true,
+      "evidence": {
+        "actorUuid": "Actor.05H2LvFPer0rbsJc",
+        "total": 6
+      }
+    },
+    {
+      "tool": "pf2e_add_inventory_item",
+      "args": {
+        "actorUuid": "Actor.O7wmqBzoenWFou65",
+        "uuid": "Compendium.pf2e.equipment-srd.Item.w2ENw2VMPcsbif8g",
+        "quantity": 1
+      },
+      "ok": false,
+      "error": {
+        "code": "PF2E_UNSUPPORTED_ITEM",
+        "message": "Only PF2e physical inventory item types can be transferred or added."
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "data": {
+          "name": "[MCP ACCEPTANCE] Attacker Token"
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe"
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ",
+        "data": {
+          "name": "[MCP ACCEPTANCE] Target Token"
+        }
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Scene.J6MzumtLUwDPMK5z.Token.W5fbXefak31UkvJZ"
+      }
+    },
+    {
+      "tool": "move_document",
+      "args": {
+        "uuid": "Actor.3CjdDmRxzqwRguPk",
+        "folderUuid": "Folder.4Aqqi534MLRCChZh"
+      },
+      "ok": true,
+      "evidence": {
+        "uuid": "Actor.3CjdDmRxzqwRguPk"
+      }
+    },
+    {
+      "tool": "add_combatants",
+      "args": {
+        "encounterUuid": "Combat.DyLIFuON9aWdqd57",
+        "tokenUuids": [
+          "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe"
+        ]
+      },
+      "ok": false,
+      "error": {
+        "code": "ENCOUNTER_STARTED",
+        "message": "Combatant changes are only allowed in an unstarted encounter at round zero."
+      }
+    },
+    {
+      "tool": "update_document",
+      "args": {
+        "uuid": "Actor.05H2LvFPer0rbsJc",
+        "data": {
+          "ownership": {
+            "default": 3
+          }
+        }
+      },
+      "ok": false,
+      "error": {
+        "code": "OPERATION_FAILED",
+        "message": "Field is not writable: ownership"
+      }
+    },
+    {
+      "tool": "pf2e_inspect_damage_application",
+      "args": {
+        "messageUuid": "ChatMessage.pWbddV2o8kMHJTUV",
+        "targetTokenUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe",
+        "shieldBlock": true,
+        "shieldItemUuid": "Scene.J6MzumtLUwDPMK5z.Token.uhoDpyIgXnPS6mZe.Actor.05H2LvFPer0rbsJc.Item.TRH5ULVev49YTgHg"
+      },
+      "ok": false,
+      "error": {
+        "code": "INVALID_SHIELD",
+        "message": "Shield Block requires the same raised, unbroken, undestroyed physical shield in the native contextual actor."
+      }
+    }
+  ]
+}

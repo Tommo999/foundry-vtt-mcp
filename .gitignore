@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.pem
+*.key
+.env
+!tests/fixtures/localhost.pem
+!tests/fixtures/localhost-key.pem

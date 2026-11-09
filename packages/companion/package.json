@@ -1,0 +1,22 @@
+{
+  "name": "@foundry-mcp/companion",
+  "version": "0.8.1",
+  "type": "module",
+  "bin": {
+    "foundry-mcp": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@foundry-mcp/shared": "0.8.1",
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "ws": "^8.18.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.5.0"
+  }
+}
