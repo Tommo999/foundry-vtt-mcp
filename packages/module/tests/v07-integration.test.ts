@@ -64,6 +64,7 @@ beforeEach(() => {
   api.__test.runtime.socket = socket;
   api.__test.runtime.worldId = "world-a";
   api.__test.runtime.userId = "gm-a";
+  api.__test.runtime.sessionId = "fixture-session";
   api.__test.runtime.autoWrites = false;
   mocks.context.mockReset().mockImplementation(async (_args: any, ctx: any) => {
     if (ctx.game.system.id !== "pf2e")

@@ -1,6 +1,8 @@
 # Foundry VTT MCP 0.8.1
 
-Local bugfix release, 2026-11-07. Module and Windows setup archives are built and verified. Live acceptance remains pending deployment of the patched module and companion.
+Initial local bugfix release, 2026-11-07. Module and Windows setup archives were built and verified; the initial validation record below is retained with its original deployment limits.
+
+**2026-11-09 live update:** All three original findings passed the targeted retest on Foundry 14.363 / PF2e 8.7.0, including fresh encounter start, turn advancement, native ammo operations and the stale/duplicate safety guards. See the [completed live retest](live-retest-v0.8.1-2026-11-09.md) for the 81-request record, remaining coverage limits and fixture cleanup. This is validation of the exercised paths on that environment, not a cross-version compatibility claim.
 
 ## Fixes
 
@@ -14,7 +16,7 @@ The release preserves the 51-tool contract. Foundry v14 remains the minimum vers
 
 Follow [Upgrade from 0.8.0 to 0.8.1](installation.md#upgrade-from-080-to-081). Keep the current pairing configuration, certificates and token. Replace the module, restart the companion from the updated checkout, refresh the Foundry GM browser, and reconnect the MCP client. Verify both the module and MCP server report 0.8.1.
 
-## Validation status
+## Initial validation record (2026-11-07)
 
 Focused automated validation completed during implementation:
 
@@ -36,4 +38,4 @@ Final integration validation:
 
 See the [versioned validation and pending-live report](live-retest-v0.8.1-2026-11-07.md) and its [structured evidence](live-retest-v0.8.1-2026-11-07.json).
 
-**Live acceptance is pending.** Browser automation returned `The browser access host is unavailable`. The existing companion still reaches Glimmerkeep on Foundry 14.363 / PF2e 8.7.0, but the installed module and existing daemon have not been updated or verified at 0.8.1. The fresh MCP process/version check above does not establish the version of either running component. The affected search, encounter, ammunition and safety-guard live checks therefore remain pending. No new world fixtures or damage applications were created. The original [v0.8.0 acceptance report](live-acceptance-2026-11-07.md) and [call log](live-acceptance-2026-11-07.json) are retained as historical evidence.
+**Live acceptance was pending at the initial validation.** Browser automation returned `The browser access host is unavailable`. The existing companion still reaches Glimmerkeep on Foundry 14.363 / PF2e 8.7.0, but the installed module and existing daemon have not been updated or verified at 0.8.1. The fresh MCP process/version check above does not establish the version of either running component. The affected search, encounter, ammunition and safety-guard live checks therefore remain pending. No new world fixtures or damage applications were created. The original [v0.8.0 acceptance report](live-acceptance-2026-11-07.md) and [call log](live-acceptance-2026-11-07.json) are retained as historical evidence.

@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import moduleManifest from "../module.json";
 import { sanitizeData, validateObject } from "./security";
 import { handlePF2eRead, pf2eStatus } from "./pf2e";
 import { handlePF2eWrite } from "./pf2e-writes";
@@ -7,6 +8,8 @@ import { handlePF2eInventory } from "./pf2e-inventory";
 import { handleEncounters } from "./encounters";
 import { handleSessionSnapshot } from "./session-snapshot";
 import { handlePF2eChecks } from "./pf2e-checks";
+import { handlePF2eSpellcasting } from "./pf2e-spellcasting";
+import { handlePF2eSpellCast } from "./pf2e-spell-cast";
 import { handlePF2eStrikes } from "./pf2e-strikes";
 import { handlePF2eCombatContext } from "./pf2e-combat-context";
 import { handlePF2eInspectDamageApplication } from "./pf2e-damage-context";
@@ -25,6 +28,7 @@ import {
   failure,
   MAX_MESSAGE_BYTES,
   MAX_ASSET_BYTES,
+  diagnoseRuntimeVersions,
   parseTool,
   toolNames,
   writeTools,
@@ -368,6 +372,9 @@ function pf2eContext(
   const game = bridge.game;
   return {
     game,
+    get sessionId() {
+      return bridge.sessionId;
+    },
     resolve: bridge.resolve,
     serialize: bridge.serialize,
     assertWrite() {
@@ -390,12 +397,21 @@ function bridgeContext(
   socket: WebSocket,
   authorization: "approved" | "automatic",
 ): BridgeContext {
+  const expectedSessionId = runtime.sessionId;
   return {
     game: gameRef(),
+    get sessionId() {
+      return validSession(session, socket) ? runtime.sessionId : undefined;
+    },
     resolve: lookup,
     serialize,
     assertWrite() {
-      if (!validSession(session, socket) || !gm())
+      if (
+        !expectedSessionId ||
+        runtime.sessionId !== expectedSessionId ||
+        !validSession(session, socket) ||
+        !gm()
+      )
         throw Object.assign(new Error("GM session changed before write."), {
           code: "SESSION_CHANGED",
         });
@@ -419,7 +435,20 @@ async function execute(
     if (!socket || !validSession(session, socket))
       return failure("SESSION_CHANGED", "GM session changed before operation.");
     switch (tool) {
-      case "get_status":
+      case "get_status": {
+        const installedModule =
+          game.modules?.get?.(MODULE_ID)?.version ??
+          game.modules?.get?.(MODULE_ID)?.manifest?.version ??
+          null;
+        const versions = diagnoseRuntimeVersions({
+          compiledModule: String(moduleManifest.version),
+          installedModuleManifest: installedModule
+            ? String(installedModule)
+            : null,
+          runningCompanion: null,
+          mcpClient: null,
+          mcpServer: null,
+        });
         return {
           ok: true,
           data: {
@@ -429,6 +458,7 @@ async function execute(
             systemId: game.system?.id,
             systemVersion: game.system?.version,
             foundryVersion: game.version,
+            versionDiagnostics: versions,
             capabilities: {
               encounterPreparation: Boolean(
                 game.combats?.documentClass?.create &&
@@ -456,6 +486,10 @@ async function execute(
                   conditionsAndEffects: status.available,
                   inventory: status.available,
                   checksAndActions: status.available,
+                  spellcastingInspection: status.available,
+                  resourceInspection: status.available,
+                  spellCastPreview: status.available,
+                  spellCasting: status.available,
                   combatContext: status.available,
                   strikesAndDamage: status.available,
                   damageApplication: status.available,
@@ -470,9 +504,28 @@ async function execute(
             })(),
           },
         };
+      }
       case "pf2e_roll_check":
       case "pf2e_inspect_actions": {
         const data = await handlePF2eChecks(
+          tool,
+          args,
+          pf2eContext(session, socket!, authorization),
+        );
+        return { ok: true, data };
+      }
+      case "pf2e_inspect_spellcasting":
+      case "pf2e_inspect_resources": {
+        const data = await handlePF2eSpellcasting(
+          tool,
+          args,
+          pf2eContext(session, socket!, authorization),
+        );
+        return { ok: true, data };
+      }
+      case "pf2e_inspect_spell_cast":
+      case "pf2e_cast_spell": {
+        const data = await handlePF2eSpellCast(
           tool,
           args,
           pf2eContext(session, socket!, authorization),
@@ -561,7 +614,8 @@ async function execute(
       }
       case "pf2e_roll_initiative":
       case "start_encounter":
-      case "next_turn": {
+      case "next_turn":
+      case "end_encounter": {
         const ctx =
           tool === "pf2e_roll_initiative"
             ? pf2eContext(session, socket!, authorization)
@@ -1572,6 +1626,14 @@ g.Hooks.once("ready", () => {
   });
   gameRef().settings.register(MODULE_ID, "damageApplications", {
     name: "Damage application records",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { version: 1, entries: {} },
+    restricted: true,
+  });
+  gameRef().settings.register(MODULE_ID, "spellCasts", {
+    name: "Spell cast audit records",
     scope: "world",
     config: false,
     type: Object,

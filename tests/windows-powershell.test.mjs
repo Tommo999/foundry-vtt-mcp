@@ -24,6 +24,17 @@ const versionProbe = spawnSync(
   },
 );
 const shellAvailable = !versionProbe.error && versionProbe.status === 0;
+function assertPowerShellCoverage(required, available) {
+  if (required && !available) {
+    throw new Error(
+      "PowerShell smoke coverage is required, but the configured PowerShell executable did not pass its availability probe.",
+    );
+  }
+}
+assertPowerShellCoverage(
+  process.env.FOUNDRY_MCP_REQUIRE_POWERSHELL === "1",
+  shellAvailable,
+);
 const scratch = shellAvailable
   ? mkdtempSync(join(tmpdir(), "foundry-mcp-powershell-"))
   : null;
@@ -84,6 +95,13 @@ afterAll(() => {
 });
 
 describe("Windows PowerShell installer", () => {
+  it("fails instead of skipping when PowerShell coverage is required", () => {
+    expect(() => assertPowerShellCoverage(true, false)).toThrow(
+      /PowerShell smoke coverage is required/,
+    );
+    expect(() => assertPowerShellCoverage(true, true)).not.toThrow();
+  });
+
   it.skipIf(!shellAvailable)(
     "parses and passes non-invasive bootstrap and input checks",
     () => {

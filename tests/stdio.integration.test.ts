@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import companionPackage from "../packages/companion/package.json";
 import { CompanionDaemon } from "../packages/companion/src/daemon.js";
 import { createServer } from "node:net";
 import { mkdtemp, mkdir, rm, writeFile, copyFile } from "node:fs/promises";
@@ -106,10 +107,21 @@ describe("companion MCP stdio integration", () => {
       "pf2e_inspect_actions",
     );
     expect(result.tools.map((tool) => tool.name)).toContain(
+      "pf2e_inspect_spellcasting",
+    );
+    expect(result.tools.map((tool) => tool.name)).toContain(
+      "pf2e_inspect_resources",
+    );
+    expect(result.tools.map((tool) => tool.name)).toContain(
+      "pf2e_inspect_spell_cast",
+    );
+    expect(result.tools.map((tool) => tool.name)).toContain("pf2e_cast_spell");
+    expect(result.tools.map((tool) => tool.name)).toContain(
       "pf2e_roll_initiative",
     );
     expect(result.tools.map((tool) => tool.name)).toContain("start_encounter");
     expect(result.tools.map((tool) => tool.name)).toContain("next_turn");
+    expect(result.tools.map((tool) => tool.name)).toContain("end_encounter");
     expect(result.tools.map((tool) => tool.name)).toContain(
       "pf2e_combat_context",
     );
@@ -121,7 +133,10 @@ describe("companion MCP stdio integration", () => {
     expect(result.tools.map((tool) => tool.name)).toContain(
       "pf2e_apply_damage",
     );
-    expect(result.tools).toHaveLength(51);
+    expect(result.tools).toHaveLength(56);
+    expect(
+      result.tools.find((tool) => tool.name === "end_encounter")?.annotations,
+    ).toMatchObject({ readOnlyHint: false, destructiveHint: true });
     expect(
       result.tools.find(
         (tool) => tool.name === "pf2e_inspect_damage_application",
@@ -171,6 +186,17 @@ describe("companion MCP stdio integration", () => {
       result.tools.find((tool) => tool.name === "pf2e_inspect_actions")
         ?.annotations?.readOnlyHint,
     ).toBe(true);
+    for (const name of [
+      "pf2e_inspect_spellcasting",
+      "pf2e_inspect_resources",
+    ]) {
+      expect(
+        result.tools.find((tool) => tool.name === name)?.annotations,
+      ).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+      });
+    }
     expect(
       result.tools.find((tool) => tool.name === "pf2e_roll_check")?.annotations
         ?.readOnlyHint,
@@ -204,6 +230,12 @@ describe("companion MCP stdio integration", () => {
     );
     expect(body.ok).toBe(true);
     expect(body.data.connected).toBe(false);
+    expect(body.data.versionDiagnostics.versions).toMatchObject({
+      runningCompanion: companionPackage.version,
+      mcpClient: companionPackage.version,
+      mcpServer: companionPackage.version,
+    });
+    expect(body.data.versionDiagnostics.unverified).toContain("compiledModule");
   }, 10_000);
 
   it("routes the added discovery and write tools to the paired GM bridge", async () => {
@@ -290,6 +322,12 @@ describe("companion MCP stdio integration", () => {
       quantity: 1,
     });
     await routedCall("list_encounters", { offset: 0, limit: 25 });
+    await routedCall("end_encounter", {
+      encounterUuid: "Combat.test",
+      expectedRound: 1,
+      expectedTurn: null,
+      expectedCombatantUuid: null,
+    });
     await routedCall("pf2e_combat_context", {
       encounterUuid: "Combat.test",
       offset: 0,

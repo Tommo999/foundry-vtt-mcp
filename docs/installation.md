@@ -80,6 +80,16 @@ Stop the companion with Ctrl+C. From the updated source checkout, run `npm insta
 
 Stop the companion with Ctrl+C. From the updated source checkout, run `npm install` and `npm run package`; replace the installed module files from `dist/foundry-vtt-mcp.zip`, reload Foundry in the GM browser, restart the companion from the updated checkout, and restart or reconnect the MCP client. The release keeps the existing 51 tools and does not require a new pairing token or companion configuration; do not run `init` or `init --force`. Confirm the MCP server reports version 0.8.1 and the Foundry module is loaded at 0.8.1. This update fixes PF2e filtered compendium index searches, makes encounter active-state summaries agree with current-combat checks, and supports native ammunition in inventory read/add/quantity/transfer workflows. Complete the targeted live checks in the [acceptance checklist](acceptance-checklist.md) before relying on these fixes in a campaign.
 
+## Upgrade from 0.8.1 to 0.8.2
+
+1. Stop the companion with Ctrl+C and update the source checkout or extract the matching Windows setup bundle. Keep the existing configuration, certificates and pairing token; do not run `init --force`.
+2. For a source installation, run `npm install` and `npm run build` from the repository root. Install the matching module ZIP, using the public Foundry updater after the release is published, or the locally prepared `dist/releases/v0.8.2/foundry-vtt-mcp.zip` for isolated testing. A locally prepared release is not automatically available through GitHub's latest URL.
+3. Restart the companion from the updated checkout, hard-refresh the GM browser, reconnect the bridge, and restart/reconnect the MCP client so it discovers all **52 tools**.
+4. Call `get_status`. Confirm the loaded module, installed manifest, running companion, MCP client and advertised MCP server all report **0.8.2**, with no mismatch or unverified component. A manifest on disk alone does not prove the running code changed.
+5. Complete the v0.8.2 checks in the [acceptance checklist](acceptance-checklist.md) on isolated fixtures before relying on live compatibility. `end_encounter` removes only the explicitly selected current started Combat through native hooks; it preserves Actors, tokens and damage audit records. Inspect and retain tracker information first, and investigate uncertain outcomes before taking further action.
+
+For maintainer CI/tag publication setup, follow [Public releases](public-releases.md). This upgrade introduces no new pairing or TLS configuration.
+
 ## Approval controls
 
 New connections start in approval mode. Review each proposed change in Foundry and approve or reject it. The GM may switch to automatic writes for that browser session. Disconnecting, changing worlds or reconnecting ends that session and restores approval mode. Reads do not require approval.
@@ -91,3 +101,12 @@ New connections start in approval mode. Review each proposed change in Foundry a
 - **Origin rejected:** configure the exact Foundry origin including scheme and port, for example `https://vtt.example.net`.
 - **Disconnected / world unavailable:** ensure the GM browser is open in the intended world, the module is enabled, and the companion is running.
 - **Module not listed:** check that the installed folder is named `foundry-vtt-mcp` and contains `module.json` at its root.
+- **Unsupported tool or mismatched versions:** compare every `get_status.versionDiagnostics` component, restart the companion from the intended checkout, restart the MCP client and hard-refresh the GM browser. Older bridges may return unverified module versions; do not infer that the updated handler ran.
+- **CLI status is current but an agent still has old tools:** CLI status describes that CLI invocation. Call `get_status` through the agent's own MCP connection and restart that connection; another running MCP process can still contain an older build.
+
+
+## Upgrade to 0.9.0
+
+Back up your world and preserve existing damage and spell audit records. Build the source with `npm ci` and `npm run build`, then install the matching locally prepared `dist/releases/v0.9.0/foundry-vtt-mcp.zip` for isolated testing, or the published package when available. Local preparation does not publish a release.
+
+Restart the companion, hard-refresh the GM browser, reconnect the bridge and reconnect the MCP client. Confirm all five version diagnostics report 0.9.0 and discovery exposes 56 tools. A changed manifest alone does not establish that the running builds changed. Follow the [spellcasting guide](spellcasting.md) and complete the unchecked v0.9 live acceptance checks before relying on compatibility. Unresolved spell records block new casts for that Actor and must not be erased to bypass reconciliation.

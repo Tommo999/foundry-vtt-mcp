@@ -36,6 +36,13 @@ describe("Windows setup source bundle allowlist", () => {
     const files = collectSetupFiles();
     for (const required of [
       "package-lock.json",
+      "AGENTS.md",
+      "CONTRIBUTING.md",
+      "docs/architecture.md",
+      "docs/maintenance.md",
+      "docs/public-releases.md",
+      "docs/spellcasting.md",
+      "scripts/prepare-release.mjs",
       "setup-windows.cmd",
       "scripts/setup-windows.ps1",
       "scripts/windows-setup-helper.mjs",

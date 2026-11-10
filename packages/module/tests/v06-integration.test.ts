@@ -1,3 +1,4 @@
+import moduleManifest from "../module.json";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -58,11 +59,13 @@ beforeEach(() => {
   game.user.id = "gm-a";
   game.user.isGM = true;
   game.system = { id: "pf2e", version: "test" };
+  game.modules = undefined;
   game.settings.get = () => true;
   socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
   api.__test.runtime.socket = socket;
   api.__test.runtime.worldId = "world-a";
   api.__test.runtime.userId = "gm-a";
+  api.__test.runtime.sessionId = "fixture-session";
   api.__test.runtime.autoWrites = false;
   mocks.checks
     .mockReset()
@@ -74,7 +77,12 @@ beforeEach(() => {
     .mockReset()
     .mockImplementation(async (tool: string, _args: any, ctx: any) => {
       if (
-        ["pf2e_roll_initiative", "start_encounter", "next_turn"].includes(tool)
+        [
+          "pf2e_roll_initiative",
+          "start_encounter",
+          "next_turn",
+          "end_encounter",
+        ].includes(tool)
       )
         ctx.assertWrite();
       return { routed: tool };
@@ -82,6 +90,66 @@ beforeEach(() => {
 });
 
 describe("v0.6 PF2e checks and combat integration", () => {
+  it("reports compiled module code separately from the installed manifest", async () => {
+    game.modules = new Map([["foundry-vtt-mcp", { version: "0.8.0" }]]);
+    const result = await api.__test.execute(
+      "get_status",
+      {},
+      undefined,
+      socket,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        versionDiagnostics: {
+          versions: {
+            compiledModule: moduleManifest.version,
+            installedModuleManifest: "0.8.0",
+            runningCompanion: null,
+            mcpClient: null,
+            mcpServer: null,
+          },
+          mismatches: [
+            expect.objectContaining({
+              code: "MODULE_MANIFEST_MISMATCH",
+              expected: moduleManifest.version,
+              actual: "0.8.0",
+            }),
+          ],
+          unverified: expect.arrayContaining(["runningCompanion", "mcpClient"]),
+        },
+        pf2eAdapter: {
+          tools: {
+            spellcastingInspection: true,
+            resourceInspection: true,
+          },
+        },
+      },
+    });
+  });
+
+  it("marks legacy installed module versions as unverified", async () => {
+    game.modules = new Map([["foundry-vtt-mcp", {}]]);
+    const result = await api.__test.execute(
+      "get_status",
+      {},
+      undefined,
+      socket,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        versionDiagnostics: {
+          versions: {
+            compiledModule: moduleManifest.version,
+            installedModuleManifest: null,
+          },
+          unverified: expect.arrayContaining(["installedModuleManifest"]),
+        },
+      },
+    });
+  });
+
   it("routes check and inspection tools through PF2e context", async () => {
     for (const tool of ["pf2e_roll_check", "pf2e_inspect_actions"]) {
       expect(
@@ -100,6 +168,7 @@ describe("v0.6 PF2e checks and combat integration", () => {
       ["pf2e_roll_initiative", true],
       ["start_encounter", false],
       ["next_turn", false],
+      ["end_encounter", false],
     ] as const) {
       expect(
         await api.__test.execute(tool, {}, undefined, socket),
@@ -118,7 +187,7 @@ describe("v0.6 PF2e checks and combat integration", () => {
 
   it("keeps encounter start and turn system agnostic while requiring PF2e for initiative", async () => {
     game.system = { id: "dnd5e", version: "test" };
-    for (const tool of ["start_encounter", "next_turn"]) {
+    for (const tool of ["start_encounter", "next_turn", "end_encounter"]) {
       expect(
         await api.__test.execute(tool, {}, undefined, socket),
       ).toMatchObject({ ok: true });

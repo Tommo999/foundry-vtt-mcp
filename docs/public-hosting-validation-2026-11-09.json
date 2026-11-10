@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-11-09T11:17:33.819736+00:00",
+  "release": "0.8.1",
+  "releaseRepository": "Tommo999/foundry-vtt-mcp-releases",
+  "anonymousDownloads": "pass",
+  "manifest": {
+    "id": "foundry-vtt-mcp",
+    "title": "Foundry VTT MCP Bridge",
+    "description": "Connect local MCP agents to a GM-controlled Foundry world.",
+    "version": "0.8.1",
+    "authors": [
+      {
+        "name": "Foundry VTT MCP contributors"
+      }
+    ],
+    "compatibility": {
+      "minimum": "14"
+    },
+    "esmodules": [
+      "module.js"
+    ],
+    "styles": [
+      "module.css"
+    ],
+    "url": "https://github.com/Tommo999/foundry-vtt-mcp-releases",
+    "manifest": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/latest/download/module.json",
+    "download": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/download/v0.8.1/foundry-vtt-mcp.zip"
+  },
+  "assets": [
+    {
+      "name": "module.json",
+      "url": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/latest/download/module.json",
+      "sha256": "06fbec5f52328198d4e3ca676bb11d86b7220f3cce8722bb9817298b93c2898e",
+      "bytes": 652
+    },
+    {
+      "name": "foundry-vtt-mcp.zip",
+      "url": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/download/v0.8.1/foundry-vtt-mcp.zip",
+      "sha256": "7aae066d4695b5f7a52300ed86bf80147fcf87019bafae43d60968cbe1348b97",
+      "bytes": 90575
+    },
+    {
+      "name": "foundry-vtt-windows-setup.zip",
+      "url": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/download/v0.8.1/foundry-vtt-windows-setup.zip",
+      "sha256": "bbdad802051f4101225b999799d0591ab2c6dccb8378e36c6b025b51111d0e20",
+      "bytes": 173859
+    }
+  ],
+  "tests": {
+    "files": 31,
+    "passed": 226,
+    "failed": 0,
+    "skipped": 0
+  },
+  "typecheck": "pass",
+  "build": "pass",
+  "liveFoundryAcceptance": "pending; no world deployment or mutations in this hosting task",
+  "sourceRepository": {
+    "name": "Tommo999/foundry-vtt-mcp",
+    "visibility": "private",
+    "verified": true
+  },
+  "publicRepository": {
+    "name": "Tommo999/foundry-vtt-mcp-releases",
+    "visibility": "public",
+    "releaseUrl": "https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.8.1",
+    "draft": false,
+    "prerelease": false
+  }
+}

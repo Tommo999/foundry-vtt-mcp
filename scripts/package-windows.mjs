@@ -7,6 +7,7 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
@@ -20,16 +21,23 @@ const fixedFiles = [
   "package-lock.json",
   "tsconfig.json",
   "README.md",
+  "AGENTS.md",
+  "CONTRIBUTING.md",
   "setup-windows.cmd",
   "docs/installation.md",
+  "docs/architecture.md",
+  "docs/maintenance.md",
   "docs/windows-setup.md",
   "docs/acceptance-checklist.md",
   "docs/security.md",
   "docs/tool-reference.md",
+  "docs/spellcasting.md",
   "scripts/setup-windows.ps1",
   "scripts/windows-setup-helper.mjs",
   "scripts/package.mjs",
   "scripts/package-windows.mjs",
+  "scripts/prepare-release.mjs",
+  "docs/public-releases.md",
   "packages/shared/package.json",
   "packages/module/package.json",
   "packages/module/module.json",
@@ -59,7 +67,11 @@ function collectSetupFiles(projectRoot = root) {
   return [...new Set(entries)].sort();
 }
 
-function buildArchive({ projectRoot = root, destination = output } = {}) {
+function buildArchive({
+  projectRoot = root,
+  destination = output,
+  fileOverrides = {},
+} = {}) {
   const files = collectSetupFiles(projectRoot);
   const missing = files.filter((file) => !existsSync(join(projectRoot, file)));
   if (missing.length) {
@@ -76,7 +88,11 @@ function buildArchive({ projectRoot = root, destination = output } = {}) {
     for (const file of files) {
       const target = join(staging, file);
       mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(join(projectRoot, file), target);
+      if (Object.hasOwn(fileOverrides, file)) {
+        writeFileSync(target, fileOverrides[file]);
+      } else {
+        copyFileSync(join(projectRoot, file), target);
+      }
     }
 
     let result;

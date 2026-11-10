@@ -1,6 +1,6 @@
 # MCP tool reference
 
-The companion publishes these system-agnostic tools through MCP. Inputs are validated, reads are paginated where applicable, and responses contain structured JSON. Actor and item types are discovered from the active system; their data can be read or supplied to Foundry's own document validation, but the tools do not interpret game mechanics.
+The companion publishes a system-agnostic Foundry core through MCP. Inputs are validated, reads are paginated where applicable, and responses contain structured JSON. The core discovers Actor and Item types and delegates document validation to Foundry; the separate PF2e adapter uses system-native rules and APIs.
 
 The PF2e tools are also listed for MCP clients in every game system. They require the PF2e system and report a clear unavailable status elsewhere. System-specific data and rules are handled by the PF2e adapter; the general document and encounter-preparation tools remain system agnostic.
 
@@ -11,6 +11,10 @@ The PF2e tools are also listed for MCP clients in every game system. They requir
 | `pf2e_roll_initiative`            | Roll initiative for selected combatants using their configured PF2e initiative statistic.                                   |
 | `start_encounter`                 | Activate and start an encounter after all combatants have initiative.                                                       |
 | `next_turn`                       | Advance one turn if the supplied expected round, turn and combatant still match.                                            |
+| `end_encounter`                   | End the current started world encounter after checking its exact expected tracker state; runs native Combat removal hooks. |
+| `pf2e_combat_context`             | Inspect the current PF2e combatant, explicit token candidates and native strike selectors without rolling.                 |
+| `pf2e_roll_strike`                | Roll a native on-turn weapon strike at the selected MAP against an explicit target; ammunition consumption stays disabled. |
+| `pf2e_roll_damage`                | Roll native strike damage or explicitly selected critical damage into GM chat without applying HP changes.               |
 | `search_content`                  | Search world Actors, Items, JournalEntries and Scenes by name and text content.                                             |
 | `list_folders`                    | List world folders, optionally filtered by document type.                                                                   |
 | `create_folder`                   | Create a typed folder, optionally nested under a parent folder.                                                             |
@@ -19,7 +23,7 @@ The PF2e tools are also listed for MCP clients in every game system. They requir
 | `upload_asset`                    | Upload a supported image to the module asset folder using base64 data or a local path on the companion computer.            |
 | `inspect_scene`                   | Return a bounded summary of scene dimensions, grid, tokens, walls, lights, levels and notes.                                |
 | `add_map_note`                    | Add a journal-linked note at scene coordinates, optionally targeting a journal page.                                        |
-| `get_status`                      | Report whether a GM browser is connected and identify its current world, Foundry version and game system.                   |
+| `get_status`                      | Report GM connection/world/system information and distinguish loaded module, manifest, companion and MCP versions.         |
 | `list_encounters`                 | List bounded combat preparation records, optionally filtered by scene.                                                      |
 | `inspect_encounter`               | Read a combat preparation record and its combatants with pagination.                                                        |
 | `create_encounter`                | Create an inactive, unstarted combat record for a selected scene.                                                           |
@@ -49,6 +53,10 @@ The PF2e tools are also listed for MCP clients in every game system. They requir
 | `pf2e_apply_effect`               | Apply a PF2e compendium effect using its native duration and grant rules.                                                   |
 | `pf2e_remove_effect`              | Remove one identified PF2e effect.                                                                                          |
 | `pf2e_inventory`                  | Inspect an Actor's physical inventory, including native ammunition, and coin denominations.                                |
+| `pf2e_inspect_spellcasting`        | Inspect bounded native PF2e spellcasting entries and options, prepared positions, ranks, signatures and resource readiness. |
+| `pf2e_inspect_spell_cast`        | Preview an explicit native cast and return an expiring session-bound intent, resource facts and combat snapshot. |
+| `pf2e_cast_spell`                | Execute that exact reviewed cast through native resource and chat APIs after approval; no automatic effects. |
+| `pf2e_inspect_resources`           | Inspect native focus/hero points and bounded spell-slot, innate-use and owned-item resource facts without spending them. |
 | `pf2e_add_inventory_item`         | Add a PF2e compendium physical item, including ammunition, with a positive quantity.                                         |
 | `pf2e_set_item_quantity`          | Set an existing inventory item's quantity.                                                                                  |
 | `pf2e_transfer_item`              | Transfer an inventory item and quantity between Actors.                                                                     |
@@ -107,13 +115,13 @@ Use `inspect_scene` before placing a map note so the agent can use the scene bou
 
 ## PF2e encounter preparation
 
-1. Call `pf2e_status` and confirm PF2e is available. Use `pf2e_search_compendium` to find creatures or hazards by level, traits, rarity, size or text. Hazard searches can filter simple or complex hazards. Equipment searches also support item type and price filters.
+1. Call `pf2e_status` and confirm PF2e is available. Use `pf2e_search_compendium` to find creatures or hazards by level, traits, rarity, size or text. Hazard searches can filter simple or complex hazards. Equipment searches also support item type (including native ammunition) and price filters; equipment size filters are unsupported.
 2. Call `pf2e_party_summary` with a party UUID when you want a specific party. It summarizes party members, including NPCs. Use member levels and XP thresholds to plan. Encounter XP uses one party level and size; mixed-level parties must provide both explicit `partyLevel` and `partySize` overrides because the native calculator cannot calculate from individual levels.
 3. Call `pf2e_analyze_encounter` with participants and either a party UUID or both `partyLevel` and `partySize`. Each participant can have a quantity and normal, elite or weak adjustment. `normal` leaves the creature unadjusted; elite and weak apply only to NPC Actors, and hazards reject those adjustments. Party analysis uses characters and reports NPC exclusions. The tool uses PF2e's native XP calculation and world Proficiency without Level setting; if the setting cannot be read, analysis returns an error instead of assuming a variant. It never awards XP.
 4. Use `pf2e_import_document` when you want a native PF2e copy in the world. It uses Foundry/PF2e import APIs and preserves supported source fields and links; it is not a promise of a byte-for-byte copy or retention of every custom flag. Check the imported document's ownership in the destination world; source compendium ownership is not a guarantee of the resulting world permissions.
 5. Call `pf2e_stage_encounter` with a scene and placements to create hidden tokens for GM review. Tokens are hidden by default; set `hidden: false` only when you want a visible token. World actors requested with an elite/weak adjustment are cloned before adjustment, so staging does not change the source actor. It creates no combat and starts no encounter. The operation is not atomic: on failure, inspect its partial result for created UUIDs and the failed placement, then reconcile those documents manually before retrying. The tools do not automatically roll back or retry partial writes.
 
-Elite and weak adjustments use PF2e's native actor adjustment behavior rather than hard-coded formulas. Encounter analysis uses PF2e's native XP calculator and does not assume an already active encounter. These tools require a GM in a PF2e world. Their API compatibility has not yet been verified against a live PF2e installation.
+Elite and weak adjustments use PF2e's native actor adjustment behavior rather than hard-coded formulas. Encounter analysis uses PF2e's native XP calculator and does not assume an already active encounter. These tools require a GM in a PF2e world. The targeted v0.8.1 live retest passed on 2026-11-09 using Foundry 14.363 / PF2e 8.7.0. See the [v0.8.1 live retest report](live-retest-v0.8.1-2026-11-09.md) for evidence and fixture cleanup; this history is not a compatibility matrix or acceptance evidence for newer builds.
 
 ## PF2e conditions, effects and inventory
 
@@ -121,7 +129,7 @@ Elite and weak adjustments use PF2e's native actor adjustment behavior rather th
 
 `pf2e_apply_effect` takes a PF2e compendium effect UUID and relies on PF2e's native duration and grant behavior. `pf2e_remove_effect` removes only the selected effect UUID. Both require GM approval or session auto-write; effect and condition changes are not equivalent to a general Actor delete operation.
 
-`pf2e_inventory` provides a read-only view of an Actor's items and coins. `pf2e_add_inventory_item` adds a compendium item with quantity 1–9999 and native stacking unless `newStack` is requested. `pf2e_set_item_quantity` sets an existing item's quantity to an exact positive value from 1–9999, increasing or decreasing it; zero is rejected. `pf2e_transfer_item` physically moves the selected quantity from a source Actor to a target Actor; it does not simulate a purchase. A full-quantity transfer can remove the item from the source Actor. `pf2e_add_coins` only adds coins, with positive integer values per denomination; it does not deduct or convert currency.
+`pf2e_inventory` provides a read-only view of an Actor's supported physical items and coins, including native PF2e ammunition and legacy consumables. `pf2e_add_inventory_item` adds an allowed physical compendium item with quantity 1–9999 and native stacking unless `newStack` is requested. `pf2e_set_item_quantity` sets an existing item's quantity to an exact positive value from 1–9999, increasing or decreasing it; zero is rejected. `pf2e_transfer_item` physically moves the selected quantity from a source Actor to a target Actor; it does not simulate a purchase. A full-quantity transfer can remove the item from the source Actor. `pf2e_add_coins` only adds coins, with positive integer values per denomination; it does not deduct or convert currency.
 
 `pf2e_create_loot` creates a Loot Actor with optional compendium items and coins. It uses Foundry's normal world ownership defaults and does not change permissions. Multi-step inventory transfers and loot creation can partially succeed. If a tool returns partial UUIDs, inspect and reconcile the results manually before another attempt; the server does not promise atomic rollback or automatic retries.
 
@@ -136,6 +144,12 @@ Elite and weak adjustments use PF2e's native actor adjustment behavior rather th
 `pf2e_roll_initiative` accepts combatant UUIDs from one unstarted encounter and uses each actor's configured statistic, including Stealth when configured. Existing finite initiative values are skipped unless `reroll` is true. The default message mode is GM-only; PF2e also keeps hidden combatant rolls GM-only. Initiative writes require GM approval. The operation reports partial or uncertain outcomes; inspect the tracker before retrying.
 
 `start_encounter` explicitly activates and starts a prepared combat through native Foundry APIs. Every participant must have initiative, and the tool refuses to switch from another active started encounter. `next_turn` calls Foundry's native turn method once and requires `expectedRound`, `expectedTurn` and `expectedCombatantUuid` from the latest `inspect_encounter` result. If the state changed, refresh the encounter before issuing another request. Both controls require GM approval. Chat rolls, encounter start and turn advancement must not be automatically retried after an uncertain result. These controls do not cast spells or apply damage to HP.
+
+`end_encounter` requires the current started world Combat UUID and the same fresh expected tracker fields. An empty started Combat uses null for its inspected turn and combatant UUID. After GM approval, ending removes that specific Combat through the native deletion operation used by Foundry's end-combat confirmation; native hooks run, and Actors, tokens, scenes and damage audit records remain. It shares the combat lock with turn advancement and rejects stale, inactive, unstarted or non-world targets. An error or unconfirmed removal reports an uncertain partial outcome: inspect Foundry before taking further action. This is not a general deletion API.
+
+`get_status` reports `versionDiagnostics.versions` for `compiledModule`, `installedModuleManifest`, `runningCompanion`, `mcpClient` and `mcpServer`, plus explicit `mismatches` and `unverified` components. Missing legacy values do not imply a match. If versions disagree, update/restart the relevant companion or MCP process and hard-refresh the GM browser before testing a new handler. Pairing tokens and configuration contents are not included.
+
+The CLI `status` command reports its own invoking client build and that build's advertised MCP version. It cannot identify a different MCP process already running inside an agent connection. Use `get_status` through that agent's actual MCP connection to verify its client/server build, and restart that connection after an update.
 
 ## Session snapshots
 
@@ -167,6 +181,16 @@ Replace every example identifier and state value with the values returned for th
 `pf2e_roll_strike` takes the combat context's attacker, target, strike index/slug/item UUID and expected state. Choose `attackNumber` 1, 2 or 3 to select the native MAP variant; PF2e applies agile and other adjustments. Rolls are GM-only. Foundry must still show the same active combatant and tracker state when the request runs. Only primary PC/NPC strikes are supported; reactions, off-turn rolls, alternate usages and consumable-trait strikes are not. Native PF2e and module rule hooks can run, so review the resulting chat before retrying an uncertain roll.
 
 `pf2e_roll_damage` uses the same explicit selectors and takes `critical: false` or `true` to choose the normal or critical damage method. Critical damage is an explicit request; the server does not infer or validate it against a previous attack. The native roll uses current PF2e damage context and is posted to GM-only chat for review. It does not apply HP damage or simulate target immunities, weaknesses or resistances. Strike/damage rolls do not track action economy or perform other combat bookkeeping. They require GM approval and uncertain results must be inspected before retrying.
+
+## PF2e spellcasting (v0.9)
+
+The four spellcasting tools extend the contract to 56 tools. See the [spellcasting guide](spellcasting.md) for the complete preview/execution workflow and reconciliation limits. Live acceptance requires matching loaded builds; see [validation](validation-v0.9.0.md).
+
+Both tools accept `targetUuid` for a root world character/NPC Actor or an explicit world scene token, plus `offset` and `limit` (default 25, maximum 100). Linked and synthetic token Actors are supported. `pf2e_inspect_spellcasting` also accepts an optional owned `entryUuid` filter. It returns paginated `options`, bounded entry summaries, and per-entry warnings. Unsupported ritual/item/ephemeral entries remain distinguishable from ordinary empty spell lists. Native failures in one entry do not erase good entries.
+
+Spell option `rank` is the native computed cast rank. `groupNumber` identifies the native slot group; prepared cantrips use group 0 even when their rank is automatically heightened. `slotId` preserves the original prepared position, including gaps; flexible non-cantrip and spontaneous options use a rank pool with null slot ID. Native signature and virtual-heightening choices are reported rather than inferred from the spell's base rank. Availability is a read-time resource fact, not permission to bypass later explicit caster/turn/review checks.
+
+Resource inspection returns fixed focus/hero-point summaries and paginated resource `entries`. Missing or incomplete values remain null/unavailable; zero remains zero. Prepared rows report `readyCount` for owned, unexpended prepared selections, distinct from empty capacity, plus bounded slot details with `slotsTotal`/`slotsTruncated`. Item use/frequency facts do not activate items or infer recovery rules. Resource rows are capped at 500 with an explicit `truncated` marker; warnings and entry summaries are bounded too. These reads do not spend resources, post chat, prepare spells, advance time, or change controlled/targeted tokens.
 
 ## Boundaries
 

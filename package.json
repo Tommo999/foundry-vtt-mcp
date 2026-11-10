@@ -1,6 +1,6 @@
 {
   "name": "foundry-vtt-mcp",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "package": "npm run build && node scripts/package.mjs",
     "package:windows": "npm run package && node scripts/package-windows.mjs",
+    "release:prepare": "npm run build && node scripts/prepare-release.mjs",
     "pretest": "npm run build --workspace @foundry-mcp/companion",
     "format": "prettier --write \"packages/**/*.ts\" \"tests/**/*.ts\" \"scripts/*.mjs\" \"*.json\""
   },

@@ -4,9 +4,36 @@ import {
   toolNames,
   writeTools,
   destructiveTools,
+  diagnoseRuntimeVersions,
 } from "@foundry-mcp/shared";
 
 describe("shared MCP tool contracts", () => {
+  it("reports version mismatches and unverified legacy components", () => {
+    expect(
+      diagnoseRuntimeVersions({
+        compiledModule: "3.2.1",
+        installedModuleManifest: null,
+        runningCompanion: "0.8.0",
+        mcpClient: "3.2.1",
+        mcpServer: "3.2.1",
+      }),
+    ).toMatchObject({
+      mismatches: [
+        expect.objectContaining({
+          code: "COMPANION_MODULE_VERSION_MISMATCH",
+          expected: "3.2.1",
+          actual: "0.8.0",
+        }),
+        expect.objectContaining({
+          code: "COMPANION_CLIENT_VERSION_MISMATCH",
+          expected: "0.8.0",
+          actual: "3.2.1",
+        }),
+      ],
+      unverified: ["installedModuleManifest"],
+    });
+  });
+
   it("publishes the agreed tool set", () => {
     expect(toolNames).toEqual([
       "pf2e_combat_context",
@@ -14,9 +41,14 @@ describe("shared MCP tool contracts", () => {
       "pf2e_roll_damage",
       "pf2e_roll_check",
       "pf2e_inspect_actions",
+      "pf2e_inspect_spellcasting",
+      "pf2e_inspect_resources",
+      "pf2e_inspect_spell_cast",
+      "pf2e_cast_spell",
       "pf2e_roll_initiative",
       "start_encounter",
       "next_turn",
+      "end_encounter",
       "list_encounters",
       "inspect_encounter",
       "create_encounter",
@@ -98,6 +130,88 @@ describe("shared MCP tool contracts", () => {
       expect(destructiveTools.has(tool)).toBe(false);
     }
     expect(writeTools.has("pf2e_combat_context")).toBe(false);
+  });
+  it("validates bounded native spellcasting inspection inputs as read-only", () => {
+    expect(
+      parseTool("pf2e_inspect_spellcasting", { targetUuid: "Actor.pc" }).args,
+    ).toMatchObject({ targetUuid: "Actor.pc", offset: 0, limit: 25 });
+    expect(
+      parseTool("pf2e_inspect_spellcasting", {
+        targetUuid: "Scene.scene.Token.token",
+        entryUuid: "Actor.pc.Item.entry",
+        offset: 10,
+        limit: 100,
+      }).args,
+    ).toMatchObject({ offset: 10, limit: 100 });
+    expect(
+      parseTool("pf2e_inspect_resources", { targetUuid: "Actor.pc" }).args,
+    ).toMatchObject({ offset: 0, limit: 25 });
+    expect(() =>
+      parseTool("pf2e_inspect_spellcasting", {
+        targetUuid: "Actor.pc",
+        entryUuid: "",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseTool("pf2e_inspect_resources", {
+        targetUuid: "Actor.pc",
+        limit: 101,
+      }),
+    ).toThrow();
+    expect(writeTools.has("pf2e_inspect_spellcasting")).toBe(false);
+    expect(writeTools.has("pf2e_inspect_resources")).toBe(false);
+    expect(writeTools.has("pf2e_inspect_spell_cast")).toBe(false);
+    expect(writeTools.has("pf2e_cast_spell")).toBe(true);
+    expect(destructiveTools.has("pf2e_cast_spell")).toBe(true);
+  });
+  it("binds spell cast execution to an explicit nullable combat snapshot", () => {
+    const selection = {
+      casterTokenUuid: "Scene.scene.Token.caster",
+      entryUuid: "Actor.pc.Item.entry",
+      spellUuid: "Actor.pc.Item.spell",
+      rank: 3,
+      slotId: null,
+      targetTokenUuids: [],
+    };
+    expect(parseTool("pf2e_inspect_spell_cast", selection).args).toMatchObject({
+      ...selection,
+      messageMode: "gm",
+    });
+    expect(
+      parseTool("pf2e_cast_spell", {
+        ...selection,
+        castId: "cast-id",
+        reviewToken: "review-token",
+        expectedCombat: null,
+      }).args,
+    ).toMatchObject({ ...selection, messageMode: "gm", expectedCombat: null });
+    expect(() =>
+      parseTool("pf2e_cast_spell", {
+        ...selection,
+        castId: "cast-id",
+        reviewToken: "review-token",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseTool("pf2e_inspect_spell_cast", {
+        ...selection,
+        targetTokenUuids: ["Scene.scene.Token.t", "Scene.scene.Token.t"],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseTool("pf2e_cast_spell", {
+        ...selection,
+        castId: "cast-id",
+        reviewToken: "review-token",
+        expectedCombat: {
+          encounterUuid: "Combat.c",
+          round: 1,
+          turn: 0,
+          combatantUuid: "Combat.c.Combatant.c",
+        },
+        consumeAmmo: true,
+      }),
+    ).toThrow();
   });
   it("validates v0.8 damage application options and classifications", () => {
     const base = {
@@ -218,18 +332,38 @@ describe("shared MCP tool contracts", () => {
         expectedCombatantUuid: "Combatant.a",
       }),
     ).toThrow();
+    expect(
+      parseTool("end_encounter", {
+        encounterUuid: "Combat.a",
+        expectedRound: 1,
+        expectedTurn: null,
+        expectedCombatantUuid: null,
+      }).tool,
+    ).toBe("end_encounter");
+    expect(() =>
+      parseTool("end_encounter", {
+        encounterUuid: "Combat.a",
+        expectedRound: 0,
+        expectedTurn: 0,
+        expectedCombatantUuid: "Combatant.a",
+      }),
+    ).toThrow();
     for (const tool of [
       "pf2e_roll_check",
       "pf2e_roll_initiative",
       "start_encounter",
       "next_turn",
+      "end_encounter",
     ] as const)
       expect(writeTools.has(tool)).toBe(true);
     expect(writeTools.has("pf2e_inspect_actions")).toBe(false);
+    expect(writeTools.has("pf2e_inspect_spellcasting")).toBe(false);
+    expect(writeTools.has("pf2e_inspect_resources")).toBe(false);
     for (const tool of [
       "pf2e_roll_initiative",
       "start_encounter",
       "next_turn",
+      "end_encounter",
     ] as const)
       expect(destructiveTools.has(tool)).toBe(true);
     expect(destructiveTools.has("pf2e_roll_check")).toBe(false);

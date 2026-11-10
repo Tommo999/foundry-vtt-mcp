@@ -2,6 +2,7 @@ import https from "node:https";
 import type http from "node:http";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import companionPackage from "../package.json";
 import { WebSocketServer, WebSocket } from "ws";
 import {
   MAX_MESSAGE_BYTES,
@@ -9,6 +10,7 @@ import {
   parseTool,
   writeTools,
   failure,
+  diagnoseRuntimeVersions,
   type BridgeIdentity,
   type BridgeRequest,
   type ToolName,
@@ -45,6 +47,23 @@ const validIdentity = (x: any): x is BridgeIdentity =>
   typeof x.foundryVersion === "string" &&
   typeof x.systemId === "string" &&
   typeof x.systemVersion === "string";
+function withCompanionVersion(result: any): any {
+  if (!result || result.ok !== true || !result.data) return result;
+  const current = result.data.versionDiagnostics?.versions ?? {};
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      versionDiagnostics: diagnoseRuntimeVersions({
+        compiledModule: current.compiledModule ?? null,
+        installedModuleManifest: current.installedModuleManifest ?? null,
+        runningCompanion: companionPackage.version,
+        mcpClient: current.mcpClient ?? null,
+        mcpServer: current.mcpServer ?? null,
+      }),
+    },
+  };
+}
 export class CompanionDaemon {
   private server?: https.Server;
   private wss?: WebSocketServer;
@@ -291,6 +310,13 @@ export class CompanionDaemon {
               identity: null,
               sessionId: null,
               uptimeMs: Date.now() - this.startedAt,
+              versionDiagnostics: diagnoseRuntimeVersions({
+                compiledModule: null,
+                installedModuleManifest: null,
+                runningCompanion: companionPackage.version,
+                mcpClient: null,
+                mcpServer: null,
+              }),
             },
           }),
         );
@@ -414,7 +440,11 @@ export class CompanionDaemon {
           },
         );
       });
-      res.end(JSON.stringify(result));
+      res.end(
+        JSON.stringify(
+          parsed.tool === "get_status" ? withCompanionVersion(result) : result,
+        ),
+      );
     } catch (e) {
       res.writeHead(400).end(
         JSON.stringify({

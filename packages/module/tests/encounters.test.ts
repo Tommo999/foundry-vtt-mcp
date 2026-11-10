@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleEncounters } from "../src/encounters.js";
+import { handleEncounters, withCombatLock } from "../src/encounters.js";
 import type { BridgeContext } from "../src/bridge-context.js";
 
 function makeCollection(entries: any[] = []) {
@@ -186,6 +186,32 @@ function makeEnv() {
   };
 }
 
+function makeCurrentStartedCombat(env: ReturnType<typeof makeEnv>) {
+  const combatant = {
+    id: "active-combatant",
+    uuid: "Combat.combat1.Combatant.active-combatant",
+    documentName: "Combatant",
+    parent: env.combat,
+    combat: env.combat,
+  };
+  env.combat.started = true;
+  env.combat.active = false;
+  env.combat.round = 1;
+  env.combat.turn = 0;
+  env.combat.combatant = combatant;
+  env.ctx.game.combat = env.combat;
+  return combatant;
+}
+
+function endArgs(env: ReturnType<typeof makeEnv>, combatant: any) {
+  return {
+    encounterUuid: env.combat.uuid,
+    expectedRound: env.combat.round,
+    expectedTurn: env.combat.turn,
+    expectedCombatantUuid: combatant?.uuid ?? null,
+  };
+}
+
 describe("system-agnostic encounters adapter", () => {
   it("lists world encounters and filters by a validated scene", async () => {
     const env = makeEnv();
@@ -268,6 +294,204 @@ describe("system-agnostic encounters adapter", () => {
       turn: 1,
     });
     expect(env.combat.active).toBe(false);
+  });
+
+  it("ends only the current started root combat through its native delete method", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn(async () => {
+      env.combats.contents = env.combats.contents.filter(
+        (entry: any) => entry !== env.combat,
+      );
+      return [env.combat];
+    });
+    const ended = await handleEncounters(
+      "end_encounter",
+      endArgs(env, combatant),
+      env.ctx,
+    );
+    expect(ended).toMatchObject({
+      encounterUuid: env.combat.uuid,
+      ended: true,
+      removed: true,
+      round: 1,
+      turn: 0,
+      combatantUuid: combatant.uuid,
+    });
+    expect(env.combat.delete).toHaveBeenCalledOnce();
+    expect(env.scene.tokens.contents).toHaveLength(2);
+    expect(env.actor1.uuid).toBe("Actor.actor1");
+  });
+
+  it("ends an active started empty combat with the inspected null tracker values", async () => {
+    const env = makeEnv();
+    env.combat.started = true;
+    env.combat.active = false;
+    env.combat.round = 1;
+    env.combat.turn = null;
+    env.combat.combatant = null;
+    env.ctx.game.combat = env.combat;
+    env.combat.delete = vi.fn(async () => {
+      env.combats.contents = [];
+    });
+    await expect(
+      handleEncounters(
+        "end_encounter",
+        {
+          encounterUuid: env.combat.uuid,
+          expectedRound: 1,
+          expectedTurn: null,
+          expectedCombatantUuid: null,
+        },
+        env.ctx,
+      ),
+    ).resolves.toMatchObject({ ended: true, removed: true });
+    expect(env.combat.delete).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["unstarted", false, true],
+    ["inactive", true, false],
+  ])("does not end an %s encounter", async (_label, started, active) => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.started = started;
+    if (!active) env.ctx.game.combat = null;
+    env.combat.delete = vi.fn();
+    await expect(
+      handleEncounters("end_encounter", endArgs(env, combatant), env.ctx),
+    ).rejects.toMatchObject({ code: "ENCOUNTER_NOT_ACTIVE" });
+    expect(env.combat.delete).not.toHaveBeenCalled();
+  });
+
+  it("rejects stale tracker state and concurrent duplicate end requests without repeating deletion", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn(async () => {
+      env.combats.contents = [];
+    });
+    const stale = { ...endArgs(env, combatant), expectedRound: 2 };
+    await expect(
+      handleEncounters("end_encounter", stale, env.ctx),
+    ).rejects.toMatchObject({ code: "STALE_TURN" });
+    const first = handleEncounters(
+      "end_encounter",
+      endArgs(env, combatant),
+      env.ctx,
+    );
+    const second = handleEncounters(
+      "end_encounter",
+      endArgs(env, combatant),
+      env.ctx,
+    );
+    await expect(first).resolves.toMatchObject({ ended: true });
+    await expect(second).rejects.toMatchObject({ code: "INVALID_ENCOUNTER" });
+    expect(env.combat.delete).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a wrong or non-world encounter target", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn();
+    await expect(
+      handleEncounters(
+        "end_encounter",
+        { ...endArgs(env, combatant), encounterUuid: "Combat.other" },
+        env.ctx,
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_ENCOUNTER" });
+    expect(env.combat.delete).not.toHaveBeenCalled();
+  });
+
+  it("rechecks authorization after waiting for the combat lock", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn();
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const blocker = withCombatLock(env.combat, env.ctx, async () => barrier);
+    await Promise.resolve();
+    const ending = handleEncounters(
+      "end_encounter",
+      endArgs(env, combatant),
+      env.ctx,
+    );
+    env.writes
+      .mockImplementationOnce(() => {})
+      .mockImplementationOnce(() => {
+        throw Object.assign(new Error("GM authorization changed."), {
+          code: "SESSION_CHANGED",
+        });
+      });
+    release();
+    await blocker;
+    await expect(ending).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+    expect(env.combat.delete).not.toHaveBeenCalled();
+  });
+
+  it("reports native deletion errors and unconfirmed removal as uncertain partial outcomes", async () => {
+    for (const deleteCombat of [
+      vi.fn(async () => {
+        throw new Error("native delete failed");
+      }),
+      vi.fn(async () => []),
+    ]) {
+      const env = makeEnv();
+      const combatant = makeCurrentStartedCombat(env);
+      env.combat.delete = deleteCombat;
+      await expect(
+        handleEncounters("end_encounter", endArgs(env, combatant), env.ctx),
+      ).rejects.toMatchObject({
+        code: "PARTIAL_FAILURE",
+        partial: {
+          encounterUuid: env.combat.uuid,
+          outcomeUnknown: true,
+        },
+      });
+      expect(deleteCombat).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("reports a native hook error coded STALE_TURN as a partial outcome after removal", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn(async () => {
+      env.combats.contents = [];
+      throw Object.assign(new Error("post-delete hook failed"), {
+        code: "STALE_TURN",
+      });
+    });
+    await expect(
+      handleEncounters("end_encounter", endArgs(env, combatant), env.ctx),
+    ).rejects.toMatchObject({
+      code: "PARTIAL_FAILURE",
+      partial: { removed: true, outcomeUnknown: true },
+    });
+    expect(env.combat.delete).toHaveBeenCalledOnce();
+  });
+
+  it("treats a replacement document with the same id or uuid as unconfirmed removal", async () => {
+    const env = makeEnv();
+    const combatant = makeCurrentStartedCombat(env);
+    env.combat.delete = vi.fn(async () => {
+      env.combats.contents = [
+        {
+          ...env.combat,
+          documentName: "Combat",
+          parent: null,
+          compendium: null,
+        },
+      ];
+    });
+    await expect(
+      handleEncounters("end_encounter", endArgs(env, combatant), env.ctx),
+    ).rejects.toMatchObject({
+      code: "PARTIAL_FAILURE",
+      partial: { removed: false, outcomeUnknown: true },
+    });
+    expect(env.combat.delete).toHaveBeenCalledOnce();
   });
 
   it("does not report unselected preparation or started combats as active", async () => {

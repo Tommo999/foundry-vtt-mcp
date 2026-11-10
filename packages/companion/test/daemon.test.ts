@@ -1,3 +1,4 @@
+import companionPackage from "../package.json";
 import { afterEach, afterAll, beforeAll, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -308,10 +309,18 @@ describe("CompanionDaemon", () => {
     });
     await daemon.start();
     port = (daemon.address() as any).port;
-    expect(
-      (await rpc({ id: crypto.randomUUID(), tool: "get_status", args: {} }))
-        .data.data.connected,
-    ).toBe(false);
+    const offline = await rpc({
+      id: crypto.randomUUID(),
+      tool: "get_status",
+      args: {},
+    });
+    expect(offline.data.data.connected).toBe(false);
+    expect(offline.data.data.versionDiagnostics.versions.runningCompanion).toBe(
+      companionPackage.version,
+    );
+    expect(offline.data.data.versionDiagnostics.unverified).toContain(
+      "compiledModule",
+    );
     const { ws } = await connect();
     const call = rpc({ id: "request-1", tool: "get_status", args: {} });
     const request = await new Promise<any>((resolve) =>
@@ -325,7 +334,11 @@ describe("CompanionDaemon", () => {
         result: { ok: true, data: { connected: true } },
       }),
     );
-    expect((await call).data.data.connected).toBe(true);
+    const connected = await call;
+    expect(connected.data.data.connected).toBe(true);
+    expect(
+      connected.data.data.versionDiagnostics.versions.runningCompanion,
+    ).toBe(companionPackage.version);
     ws.close();
   });
   it("rejects wrong pairing token", async () => {

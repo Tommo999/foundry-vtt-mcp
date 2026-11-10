@@ -51,6 +51,14 @@ function worldCombat(combat: any, ctx: BridgeContext): boolean {
     collectionGet(ctx.game.combats, combat.id) === combat,
   );
 }
+function combatStillInWorld(combat: any, ctx: BridgeContext): boolean {
+  return Boolean(
+    collectionGet(ctx.game.combats, combat.id) ||
+    values(ctx.game.combats).some(
+      (entry) => entry.id === combat.id || entry.uuid === combat.uuid,
+    ),
+  );
+}
 async function resolveWorldScene(
   uuid: string,
   ctx: BridgeContext,
@@ -795,6 +803,85 @@ async function nextTurn(
   });
 }
 
+async function endEncounter(
+  args: Record<string, unknown>,
+  ctx: BridgeContext,
+): Promise<unknown> {
+  const combat = await resolveWorldCombat(String(args.encounterUuid), ctx);
+  ctx.assertWrite();
+  return withCombatLock(combat, ctx, async () => {
+    ctx.assertWrite();
+    assertRootCombat(combat, ctx);
+    if (combat.started !== true || !isActive(combat, ctx)) {
+      throw codedError(
+        "ENCOUNTER_NOT_ACTIVE",
+        "Only the active started world encounter can be ended.",
+      );
+    }
+    const expectedRound = Number(args.expectedRound);
+    const expectedTurn = args.expectedTurn as number | null;
+    const expectedCombatantUuid = args.expectedCombatantUuid as string | null;
+    const currentCombatantUuid = combat.combatant?.uuid ?? null;
+    if (
+      combat.round !== expectedRound ||
+      combat.turn !== expectedTurn ||
+      currentCombatantUuid !== expectedCombatantUuid
+    ) {
+      throw codedError(
+        "STALE_TURN",
+        "Encounter state changed. Inspect the tracker and retry with its current round, turn, and combatant.",
+      );
+    }
+    if (typeof combat.delete !== "function") {
+      throw codedError(
+        "API_UNAVAILABLE",
+        "Foundry Combat delete API is unavailable.",
+      );
+    }
+    const before = {
+      encounterUuid: combat.uuid,
+      round: combat.round,
+      turn: combat.turn,
+      combatantUuid: currentCombatantUuid,
+      started: combat.started === true,
+      active: isActive(combat, ctx),
+    };
+    ctx.assertWrite();
+    assertRootCombat(combat, ctx);
+    if (
+      combat.started !== true ||
+      !isActive(combat, ctx) ||
+      combat.round !== expectedRound ||
+      combat.turn !== expectedTurn ||
+      (combat.combatant?.uuid ?? null) !== expectedCombatantUuid
+    ) {
+      throw codedError("STALE_TURN", "Encounter state changed before ending.");
+    }
+    try {
+      await combat.delete();
+      if (combatStillInWorld(combat, ctx)) {
+        throw new Error(
+          "Foundry returned without removing the encounter from the world.",
+        );
+      }
+      return { ...before, ended: true, removed: true };
+    } catch (cause) {
+      throw partialError(
+        "Encounter ending failed or removal could not be confirmed. Inspect Foundry before taking further action.",
+        {
+          ...before,
+          removed: !combatStillInWorld(combat, ctx),
+          reason:
+            cause instanceof Error
+              ? cause.message.slice(0, 300)
+              : "Unknown error",
+          outcomeUnknown: true,
+        },
+      );
+    }
+  });
+}
+
 async function rollInitiative(
   args: Record<string, unknown>,
   ctx: BridgeContext,
@@ -958,6 +1045,7 @@ export async function handleEncounters(
   if (tool === "remove_combatants") return removeCombatants(args, ctx);
   if (tool === "start_encounter") return startEncounter(args, ctx);
   if (tool === "next_turn") return nextTurn(args, ctx);
+  if (tool === "end_encounter") return endEncounter(args, ctx);
   if (tool === "pf2e_roll_initiative") return rollInitiative(args, ctx);
   throw codedError(
     "UNSUPPORTED_TOOL",

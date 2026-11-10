@@ -2,10 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import companionPackage from "../package.json";
+import { diagnoseRuntimeVersions } from "@foundry-mcp/shared";
 import https from "node:https";
 import { fileURLToPath } from "node:url";
 import { CompanionDaemon, type CompanionConfig } from "./daemon.js";
 import { validateTlsFiles } from "./config.js";
+const MCP_SERVER_VERSION = companionPackage.version;
 const configDir = () =>
   process.env.FOUNDRY_MCP_CONFIG_DIR ||
   path.join(
@@ -63,6 +66,23 @@ function call(config: CompanionConfig, body: unknown): Promise<any> {
     req.end(data);
   });
 }
+export function withMcpVersions(result: any): any {
+  if (!result || result.ok !== true || !result.data) return result;
+  const current = result.data.versionDiagnostics?.versions ?? {};
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      versionDiagnostics: diagnoseRuntimeVersions({
+        compiledModule: current.compiledModule ?? null,
+        installedModuleManifest: current.installedModuleManifest ?? null,
+        runningCompanion: current.runningCompanion ?? null,
+        mcpClient: companionPackage.version,
+        mcpServer: MCP_SERVER_VERSION,
+      }),
+    },
+  };
+}
 function toolDescription(name: string): string {
   const descriptions: Record<string, string> = {
     pf2e_combat_context:
@@ -79,12 +99,22 @@ function toolDescription(name: string): string {
       "Roll a PF2e Perception, skill or saving throw using the actor's prepared statistic and native PF2e modifiers. Posts a Foundry chat roll; messageMode defaults to GM-only. Requires GM approval. Does not roll attacks, damage or spend resources; failed or interrupted outcomes may be uncertain, so inspect chat before retrying.",
     pf2e_inspect_actions:
       "Inspect bounded PF2e action, strike and check information for an actor. This reports available data and does not execute an action, attack or damage roll.",
+    pf2e_inspect_spellcasting:
+      "Inspect bounded native PF2e spellcasting entries, prepared slots and available spell cast options for an explicit world Actor or scene token. Preserves prepared slot positions and native ranks. Read-only; does not cast, expend resources or post chat.",
+    pf2e_inspect_resources:
+      "Inspect bounded native PF2e focus, hero points, spell slots, innate uses and owned item resource fields for an explicit world Actor or scene token. Missing data is reported separately from zero. Read-only; does not recover or spend resources.",
+    pf2e_inspect_spell_cast:
+      "Inspect one explicit PF2e caster token, owned entry, spell, computed rank, slot, targets and message mode. Returns a short-lived single-use castId and reviewToken bound to current native resources and combat state. Read-only; does not consume resources or create chat.",
+    pf2e_cast_spell:
+      "Cast the exact spell selection returned by pf2e_inspect_spell_cast using PF2e's native resource consumption and native actual-cast chat card. Requires GM approval, the same selection, castId, reviewToken and expectedCombat. Targets are recorded context only; no saves, attacks, effects, templates or HP are applied. Uncertain outcomes require manual inspection and must not be retried blindly.",
     pf2e_roll_initiative:
       "Roll PF2e initiative for selected encounter combatants using each actor's configured initiative statistic (including Stealth if configured). Skips combatants with existing initiative unless reroll is true. Uses native PF2e rolls and tracker updates; messageMode defaults to GM-only. Requires GM approval and must not be automatically retried.",
     start_encounter:
       "Activate and start an encounter with Foundry's native combat APIs. Every combatant must already have initiative. This advances the world into live combat; requires GM approval.",
     next_turn:
       "Advance a started encounter by one turn using Foundry's native nextTurn API. Supply expectedRound, expectedTurn and expectedCombatantUuid from the latest inspect_encounter result; stale state is rejected. Requires GM approval and must not be automatically retried.",
+    end_encounter:
+      "End only the current started world encounter after checking its expected round, turn and combatant. Foundry's native Combat deletion hooks run. This irreversible write requires GM approval, is marked destructive, and must not be retried if the result is uncertain. It cannot delete other document types or clear the damage application ledger.",
     pf2e_status:
       "Report whether the active world is PF2e and which optional PF2e features are available. PF2e tools are listed in every world but return a clear unavailable result on other systems.",
     pf2e_search_compendium:
@@ -223,7 +253,10 @@ async function main() {
       await import("@modelcontextprotocol/sdk/server/stdio.js");
     const { toolNames, toolSchemas, writeTools, destructiveTools } =
       await import("@foundry-mcp/shared");
-    const server = new McpServer({ name: "foundry-vtt", version: "0.8.1" });
+    const server = new McpServer({
+      name: "foundry-vtt",
+      version: MCP_SERVER_VERSION,
+    });
     for (const name of toolNames) {
       const schema = toolSchemas[name];
       const shape = Object.fromEntries(
@@ -243,11 +276,13 @@ async function main() {
         },
         async (args: any) => {
           try {
-            const result = await call(config, {
+            const response = await call(config, {
               id: crypto.randomUUID(),
               tool: name,
               args,
             });
+            const result =
+              name === "get_status" ? withMcpVersions(response) : response;
             return {
               content: [{ type: "text", text: JSON.stringify(result) }],
               isError: result?.ok === false,
@@ -285,11 +320,13 @@ async function main() {
     try {
       console.log(
         JSON.stringify(
-          await call(readConfig(), {
-            id: crypto.randomUUID(),
-            tool: "get_status",
-            args: {},
-          }),
+          withMcpVersions(
+            await call(readConfig(), {
+              id: crypto.randomUUID(),
+              tool: "get_status",
+              args: {},
+            }),
+          ),
           null,
           2,
         ),
@@ -299,6 +336,13 @@ async function main() {
         JSON.stringify(
           {
             connected: false,
+            versionDiagnostics: diagnoseRuntimeVersions({
+              compiledModule: null,
+              installedModuleManifest: null,
+              runningCompanion: null,
+              mcpClient: companionPackage.version,
+              mcpServer: MCP_SERVER_VERSION,
+            }),
             error: e instanceof Error ? e.message : "Companion unavailable",
           },
           null,

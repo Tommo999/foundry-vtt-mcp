@@ -10,6 +10,29 @@ const page = {
   offset: z.number().int().min(0).default(0),
   limit: z.number().int().min(1).max(100).default(25),
 };
+const spellCastSelection = {
+  casterTokenUuid: z.string().min(1).max(512),
+  entryUuid: z.string().min(1).max(512),
+  spellUuid: z.string().min(1).max(512),
+  rank: z.number().int().min(1).max(10),
+  slotId: z.number().int().min(0).max(9999).nullable(),
+  targetTokenUuids: z
+    .array(z.string().min(1).max(512))
+    .max(20)
+    .default([])
+    .refine((items) => new Set(items).size === items.length, {
+      message: "Target token UUIDs must be unique.",
+    }),
+  messageMode: z.enum(["public", "gm", "blind", "self"]).default("gm"),
+};
+const expectedCombat = z
+  .object({
+    encounterUuid: z.string().min(1).max(512),
+    round: z.number().int().min(1),
+    turn: z.number().int().min(0),
+    combatantUuid: z.string().min(1).max(512),
+  })
+  .nullable();
 const adjustment = z.enum(["normal", "elite", "weak"]).default("normal");
 const encounterEntry = z.object({
   uuid: z.string().min(1),
@@ -71,6 +94,21 @@ export const toolSchemas = {
     messageMode: z.enum(["public", "gm", "blind", "self"]).default("gm"),
   }),
   pf2e_inspect_actions: z.object({ targetUuid: z.string().min(1), ...page }),
+  pf2e_inspect_spellcasting: z.object({
+    targetUuid: z.string().min(1),
+    entryUuid: z.string().min(1).optional(),
+    ...page,
+  }),
+  pf2e_inspect_resources: z.object({ targetUuid: z.string().min(1), ...page }),
+  pf2e_inspect_spell_cast: z.object(spellCastSelection).strict(),
+  pf2e_cast_spell: z
+    .object({
+      ...spellCastSelection,
+      castId: z.string().min(1).max(128),
+      reviewToken: z.string().min(1).max(128),
+      expectedCombat,
+    })
+    .strict(),
   pf2e_roll_initiative: z.object({
     encounterUuid: z.string().min(1),
     combatantUuids: encounterUuidList,
@@ -83,6 +121,12 @@ export const toolSchemas = {
     expectedRound: z.number().int().min(1),
     expectedTurn: z.number().int().min(0),
     expectedCombatantUuid: z.string().min(1),
+  }),
+  end_encounter: z.object({
+    encounterUuid: z.string().min(1),
+    expectedRound: z.number().int().min(1),
+    expectedTurn: z.number().int().min(0).nullable(),
+    expectedCombatantUuid: z.string().min(1).nullable(),
   }),
   list_encounters: z.object({
     sceneUuid: z.string().min(1).optional(),
@@ -367,12 +411,14 @@ export type ToolName = keyof typeof toolSchemas;
 export const toolNames = Object.keys(toolSchemas) as ToolName[];
 export const writeTools = new Set<ToolName>([
   "pf2e_apply_damage",
+  "pf2e_cast_spell",
   "pf2e_roll_strike",
   "pf2e_roll_damage",
   "pf2e_roll_check",
   "pf2e_roll_initiative",
   "start_encounter",
   "next_turn",
+  "end_encounter",
   "create_document",
   "update_document",
   "create_embedded",
@@ -398,9 +444,11 @@ export const writeTools = new Set<ToolName>([
 ]);
 export const destructiveTools = new Set<ToolName>([
   "pf2e_apply_damage",
+  "pf2e_cast_spell",
   "pf2e_roll_initiative",
   "start_encounter",
   "next_turn",
+  "end_encounter",
   "pf2e_set_condition",
   "pf2e_adjust_condition",
   "pf2e_remove_effect",
@@ -443,6 +491,42 @@ export type CompanionMessage =
   | { type: "error"; message: string };
 export function failure(code: string, message: string): ToolResult {
   return { ok: false, error: { code, message } };
+}
+export type RuntimeVersions = {
+  compiledModule: string | null;
+  installedModuleManifest: string | null;
+  runningCompanion: string | null;
+  mcpClient: string | null;
+  mcpServer: string | null;
+};
+export function diagnoseRuntimeVersions(versions: RuntimeVersions) {
+  const comparisons: Array<
+    [keyof RuntimeVersions, keyof RuntimeVersions, string]
+  > = [
+    ["compiledModule", "installedModuleManifest", "MODULE_MANIFEST_MISMATCH"],
+    ["compiledModule", "runningCompanion", "COMPANION_MODULE_VERSION_MISMATCH"],
+    ["runningCompanion", "mcpClient", "COMPANION_CLIENT_VERSION_MISMATCH"],
+    ["mcpClient", "mcpServer", "MCP_SERVER_VERSION_MISMATCH"],
+  ];
+  const mismatches = comparisons.flatMap(([expectedKey, actualKey, code]) => {
+    const expected = versions[expectedKey];
+    const actual = versions[actualKey];
+    return expected && actual && expected !== actual
+      ? [
+          {
+            code,
+            expectedComponent: expectedKey,
+            expected,
+            actualComponent: actualKey,
+            actual,
+          },
+        ]
+      : [];
+  });
+  const unverified = (
+    Object.keys(versions) as Array<keyof RuntimeVersions>
+  ).filter((key) => !versions[key]);
+  return { versions, mismatches, unverified };
 }
 export function parseTool(
   name: string,
