@@ -28,7 +28,6 @@ Review removed an automatic audit rollback: a failed finalization now makes no s
 - Main-agent `npx vitest run packages/module/tests/pf2e-spell-ledger.test.ts`: **20 tests passed**, covering cross-Actor serialization, duplicate/reloaded blockers, cache isolation, authorization/world changes, capacity, malformed stores, before/after-commit and readback failures, single-attempt finalization, inherited-key lookup and bounded summaries.
 - Coder `npm run typecheck`: passed. The ledger is not exposed as a mutation tool; setting registration and resource-summary integration are part of the casting task now in progress.
 
-
 ## Final resumed integration — 2026-11-10
 
 Three Luna-medium agents performed sequential implementation and two read-only reviews. Main-agent integration accepted the configured PF2e chat class, post-hash derived-option and prepared-index checks, malformed-combat refusal, expiry/session checks, target binding, and source/document/derived-option comparison across native card construction. The final read-only safety review found no remaining blocker in the reviewed casting paths. Native mutations remain guarded and uncertain terminal audit writes are never replayed.
@@ -55,7 +54,6 @@ Regression fixtures exercise prepared, flexible, spontaneous/signature, focus in
 - No commit, push, publication, deployment, live world write, ledger clearing or fixture replay occurred during resumption. Hosted CI/release execution and Windows PowerShell 5.1 remain unperformed; local mandatory coverage used Linux PowerShell. No new live fixtures require cleanup.
 - Native reaction/free-action, ritual, selected alternate/amped and item/wand/staff/trick workflows remain unsupported; no automatic effects/HP, saves, templates, action spending or time advancement. Ledger serializes this bridge, not independent clients; unresolved records require investigation and cannot be bypassed with a new intent.
 
-
 ## Public publication — 2026-11-10
 
 At the user's explicit request, published [v0.9.0](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.9.0) as the latest stable public release. Source commit `4e42a7b` had already passed [hosted CI](https://github.com/Tommo999/foundry-vtt-mcp/actions/runs/42743695413), including Node tests/typecheck/build and actual Windows PowerShell installer/archive checks. Earlier notes that hosted Windows checks were unperformed describe the local packaging checkpoint only.
@@ -73,3 +71,7 @@ The first draft verification exposed a real GitHub behavior: the release-by-tag 
 Foundry Update All can now discover v0.9.0 for installations using this public manifest. An old manual installation lacking that URL needs one installation from the public manifest. Foundry updates only the server module; the local companion must be updated/restarted separately and the GM browser/MCP client reconnected. The matching Windows bundle is attached to the release and preserves valid configuration on setup reruns.
 
 Read-only companion status during publication reported disconnected, with running companion/module versions unverified. No live world was changed, no companion restart was performed, and live v0.9 compatibility remains pending matching-build workflow checks. Public availability is verified; an actual Update All click in the user's installation was not performed.
+
+## Subsequent live validation
+
+The v0.9.1 worktree records partial matching-build casting checks in [live validation](live-validation-v0.9.1.md). Do not count those later checks as v0.9.0 release acceptance evidence.
