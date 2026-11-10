@@ -401,12 +401,30 @@ async function verifyRemoteDraft({
   if (typeof token !== "string" || token.length === 0) {
     fail("PUBLIC_RELEASE_TOKEN is required to verify the draft.");
   }
-  const release = await requestGitHub(
+  let release = await requestGitHub(
     verified.repository,
     "/releases/tags/" + encodeURIComponent(tag),
     token,
     fetchImpl,
   );
+  if (release === null) {
+    const matches = [];
+    for (let page = 1; page <= 5; page += 1) {
+      const batch = await requestGitHub(
+        verified.repository,
+        "/releases?per_page=100&page=" + page,
+        token,
+        fetchImpl,
+      );
+      if (!Array.isArray(batch))
+        fail("GitHub release listing returned an invalid response.");
+      matches.push(...batch.filter((candidate) => candidate?.tag_name === tag));
+      if (matches.length > 1) fail("Multiple public releases match the requested tag.");
+      if (batch.length < 100) break;
+      if (page === 5) fail("Public release listing exceeded the bounded lookup window.");
+    }
+    release = matches[0] ?? null;
+  }
   if (
     !release ||
     release.tag_name !== tag ||

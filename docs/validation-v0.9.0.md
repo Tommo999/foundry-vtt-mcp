@@ -1,6 +1,6 @@
 # v0.9.0 validation record
 
-Status: local implementation and packaging complete on 2026-11-10. Immutable v0.9.0 assets are in `dist/releases/v0.9.0/`; historical v0.8.1/v0.8.2 assets remain intact. Publication, deployment and live compatibility remain pending.
+Status: local implementation and packaging complete on 2026-11-10. Immutable v0.9.0 assets are in `dist/releases/v0.9.0/`; historical v0.8.1/v0.8.2 assets remain intact. Publication is complete (see the publication record below); deployment and live compatibility remain pending.
 
 ## Inspection integration
 
@@ -54,3 +54,22 @@ Regression fixtures exercise prepared, flexible, spontaneous/signature, focus in
 - Step 8: metadata/docs, full tests/typecheck/builds and immutable release verification complete locally. **Live acceptance is not performed.** Matching updated module/companion/GM-browser versions must be deployed and verified first, followed by isolated workflows from the unchecked acceptance checklist. The previous bridge's module/daemon versions were unverified; no new read-only status result or deployment is claimed here.
 - No commit, push, publication, deployment, live world write, ledger clearing or fixture replay occurred during resumption. Hosted CI/release execution and Windows PowerShell 5.1 remain unperformed; local mandatory coverage used Linux PowerShell. No new live fixtures require cleanup.
 - Native reaction/free-action, ritual, selected alternate/amped and item/wand/staff/trick workflows remain unsupported; no automatic effects/HP, saves, templates, action spending or time advancement. Ledger serializes this bridge, not independent clients; unresolved records require investigation and cannot be bypassed with a new intent.
+
+
+## Public publication — 2026-11-10
+
+At the user's explicit request, published [v0.9.0](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.9.0) as the latest stable public release. Source commit `4e42a7b` had already passed [hosted CI](https://github.com/Tommo999/foundry-vtt-mcp/actions/runs/42743695413), including Node tests/typecheck/build and actual Windows PowerShell installer/archive checks. Earlier notes that hosted Windows checks were unperformed describe the local packaging checkpoint only.
+
+No destination-scoped Actions token was configured, so publication used the existing local GitHub authentication without storing that credential in Actions. Release preflight validated the public repository, versions, ZIPs/hashes and release order. Created the public tag on the public repository's own main commit, created a draft, uploaded the exact four immutable assets, verified uploaded identities/sizes/bytes, then published with latest enabled. The private source history was not copied into the public repository.
+
+The first draft verification exposed a real GitHub behavior: the release-by-tag endpoint returned 404 for the unpublished draft while release listing/by-ID returned it. The publication helper now uses a bounded release-list fallback with ambiguity and exact draft/tag checks. `npx vitest run tests/release-publication.test.mjs`: **20 tests passed** after this administrative helper fix. Runtime module assets were unchanged; the published Windows bundle retains the previously verified release-time helper snapshot.
+
+- `node scripts/release-publication.mjs preflight`: passed with release environment and local authentication.
+- `node scripts/release-publication.mjs verify-draft`: passed after the lookup correction, downloading and hashing every asset.
+- `gh release edit v0.9.0 --repo Tommo999/foundry-vtt-mcp-releases --draft=false --latest`: succeeded.
+- `RELEASE_REPOSITORY=Tommo999/foundry-vtt-mcp-releases RELEASE_TAG=v0.9.0 node scripts/release-publication.mjs verify-published`: passed; all four assets anonymously downloadable and consistent.
+- Anonymous fetch of `https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/latest/download/module.json`: version **0.9.0**, stable manifest URL unchanged, ZIP URL pinned to `/releases/download/v0.9.0/foundry-vtt-mcp.zip`.
+
+Foundry Update All can now discover v0.9.0 for installations using this public manifest. An old manual installation lacking that URL needs one installation from the public manifest. Foundry updates only the server module; the local companion must be updated/restarted separately and the GM browser/MCP client reconnected. The matching Windows bundle is attached to the release and preserves valid configuration on setup reruns.
+
+Read-only companion status during publication reported disconnected, with running companion/module versions unverified. No live world was changed, no companion restart was performed, and live v0.9 compatibility remains pending matching-build workflow checks. Public availability is verified; an actual Update All click in the user's installation was not performed.

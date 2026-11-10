@@ -210,6 +210,32 @@ afterEach(() => {
 });
 
 describe("tagged public release publication gate", () => {
+  it("finds an unpublished draft through bounded release listing when tag lookup returns 404", async () => {
+    const directory = bundle();
+    const urls = [];
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      if (url.endsWith("/releases/tags/v0.8.2")) return response(404, {});
+      if (url.includes("/releases?per_page=100&page=1"))
+        return response(200, [{ id: 81, tag_name: "v0.8.2", draft: true, prerelease: false, assets: [] }]);
+      throw new Error("Should stop after locating draft");
+    };
+    await expect(verifyRemoteDraft({ directory, tag: "v0.8.2", repository, token: "test-token", fetchImpl }))
+      .rejects.toThrow(/exact four-file allowlist/);
+    expect(urls.some((url) => url.includes("/releases?per_page=100&page=1"))).toBe(true);
+  });
+
+  it("fails closed on absent, wrong, or ambiguous listed draft tags", async () => {
+    const directory = bundle();
+    const run = (list) => verifyRemoteDraft({
+      directory, tag: "v0.8.2", repository, token: "test-token",
+      fetchImpl: async (url) => url.endsWith("/releases/tags/v0.8.2") ? response(404, {}) : response(200, list),
+    });
+    await expect(run([])).rejects.toThrow(/expected unpublished draft/);
+    await expect(run([{ id: 81, tag_name: "v0.8.2", draft: false }])).rejects.toThrow(/expected unpublished draft/);
+    await expect(run([{ id: 81, tag_name: "v0.8.2" }, { id: 82, tag_name: "v0.8.2" }])).rejects.toThrow(/Multiple public releases/);
+  });
+
   it("requires exact v-prefixed semantic version tags", () => {
     expect(parseTag("v0.8.2-rc.1")).toMatchObject({
       version: "0.8.2-rc.1",
