@@ -15,3 +15,6 @@ Main checks:
 Source-shaped regressions cover legacy/missing and malformed version fields, stale pairing sockets, mismatches/unknown diagnostics, untrusted redirect hosts, streamed size limits, existing staging/config preservation, exact staged files, corrupted hashes/invalid metadata/bundle failure and downgrade refusal. Release-verifier tests retain corrupted/traversal/duplicate archive checks and are now included in actual Windows CI.
 
 Hosted Windows CI, public publication and post-publication real staging are recorded below when complete. Matching module/daemon/browser live acceptance remains pending deployment; this updater task did not modify a live world or restart the companion. No config, certificate, pairing or audit record was reset.
+
+
+Hosted CI for initial commit `42606be` passed Node validation and rejected one Windows assertion solely because the native corrupt-archive error prefix differed. CRC/traversal/duplicate/native PowerShell checks passed. Normalized the existing verifier error wording, added a 4097-entry rejection regression and bounded subprocess timeouts; no archive checks were relaxed. Focused archive suite: 22 tests passed. The earlier unpublished v0.10.0 candidate was preserved under `/tmp` and regenerated from the final helper source before publication.

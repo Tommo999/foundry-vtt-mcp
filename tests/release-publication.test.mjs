@@ -410,6 +410,19 @@ describe("tagged public release publication gate", () => {
     ).toThrow(/unsafe traversal path/);
   });
 
+  it("rejects ZIPs with more than 4096 entries", () => {
+    const directory = bundle();
+    const entries = Array.from({ length: 4097 }, (_, index) => [
+      `file-${index}.txt`,
+      "x",
+    ]);
+    writeRawZip(entries, join(directory, "foundry-vtt-mcp.zip"));
+    refreshChecksums(directory);
+    expect(() =>
+      verifyReleaseBundle({ directory, tag: "v0.8.2", repository }),
+    ).toThrow(/too many entries/);
+  });
+
   it("rejects a private release destination before considering publication", async () => {
     await expect(
       preflightRelease({

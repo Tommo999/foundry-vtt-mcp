@@ -97,7 +97,7 @@ function runUnzip(args, archive) {
     const runTar = (tarArgs) =>
       spawnSync("tar.exe", tarArgs, {
         encoding: "utf8",
-        timeout: 30_000,
+        timeout: 15_000,
         maxBuffer: 32 * 1024 * 1024,
       });
     if (operation === "list") {
@@ -125,19 +125,23 @@ function runUnzip(args, archive) {
     const listed = runTar(["-tf", resolve(archive)]);
     if (listed.error || listed.status !== 0)
       fail(
-        "Could not test release ZIP " +
+        "Could not verify release ZIP " +
           archive +
           ": " +
           (listed.stderr || listed.error?.message || "tar failed").trim(),
       );
-    for (const name of listed.stdout
-      .split(/\r?\n/)
-      .filter((value) => value && !value.endsWith("/"))) {
+    const entries = listed.stdout.split(/\r?\n/).filter(Boolean);
+    if (entries.length > 4096)
+      fail("ZIP contains too many entries: " + archive);
+    const verificationStarted = Date.now();
+    for (const name of entries.filter((value) => !value.endsWith("/"))) {
+      if (Date.now() - verificationStarted > 120_000)
+        fail("ZIP verification exceeded its time limit: " + archive);
       const checked = runTar(["-xOf", resolve(archive), "--", name]);
       if (checked.error || checked.status !== 0)
         fail(
-          "Could not verify release ZIP entry " +
-            name +
+          "Could not verify release ZIP " +
+            archive +
             ": " +
             (checked.stderr || checked.error?.message || "tar failed").trim(),
         );
@@ -146,6 +150,7 @@ function runUnzip(args, archive) {
   }
   const result = spawnSync("unzip", args, {
     encoding: "utf8",
+    timeout: 60_000,
     maxBuffer: 32 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) {
@@ -164,6 +169,7 @@ function zipEntries(path) {
   const rawEntries = runUnzip(["-Z1", path], path)
     .split(/\r?\n/)
     .filter(Boolean);
+  if (rawEntries.length > 4096) fail("ZIP contains too many entries: " + path);
   const names = rawEntries.map((entry) => entry.replace(/\/$/, ""));
   if (new Set(names).size !== names.length) {
     fail("ZIP contains duplicate paths: " + path);
