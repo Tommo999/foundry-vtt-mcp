@@ -487,7 +487,7 @@ export type BrowserResponse = {
 };
 export type CompanionMessage =
   | BridgeRequest
-  | { type: "paired"; sessionId: string }
+  | { type: "paired"; sessionId: string; runningCompanionVersion?: string }
   | { type: "error"; message: string };
 export function failure(code: string, message: string): ToolResult {
   return { ok: false, error: { code, message } };
@@ -526,7 +526,45 @@ export function diagnoseRuntimeVersions(versions: RuntimeVersions) {
   const unverified = (
     Object.keys(versions) as Array<keyof RuntimeVersions>
   ).filter((key) => !versions[key]);
-  return { versions, mismatches, unverified };
+  return {
+    versions,
+    mismatches,
+    unverified,
+    upgradeGuidance: getUpgradeGuidance(mismatches, unverified),
+  };
+}
+export type UpgradeGuidance = {
+  status: "current" | "update-recommended" | "unverified";
+  steps: string[];
+};
+export function isBoundedStableOrPrereleaseVersion(
+  value: unknown,
+): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= 64 &&
+    /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(value)
+  );
+}
+export function getUpgradeGuidance(
+  mismatches: Array<{ code: string }> = [],
+  unverified: string[] = [],
+): UpgradeGuidance {
+  const needsUpdate = mismatches.length > 0;
+  const steps = [
+    "Update the Foundry VTT MCP module from Foundry’s Add-on Modules screen.",
+    "Install or update the local companion, then restart the companion service.",
+    "Hard refresh the Foundry browser tab as GM.",
+    "Reconnect the MCP client to the local companion.",
+  ];
+  return {
+    status: needsUpdate
+      ? "update-recommended"
+      : unverified.length
+        ? "unverified"
+        : "current",
+    steps: needsUpdate || unverified.length ? steps : [],
+  };
 }
 export function parseTool(
   name: string,

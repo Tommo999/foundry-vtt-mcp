@@ -63,21 +63,28 @@ function rpc(
   });
 }
 async function connect(pairing = token, wsOrigin = origin) {
-  return new Promise<{ ws: WebSocket; session: string }>((resolve, reject) => {
-    const ws = new WebSocket(`wss://localhost:${port}/bridge`, {
-      ca: fs.readFileSync(cert),
-      origin: wsOrigin,
-    });
-    ws.once("error", reject);
-    ws.once("close", () => reject(new Error("pairing rejected")));
-    ws.once("open", () =>
-      ws.send(JSON.stringify({ type: "hello", token: pairing, identity })),
-    );
-    ws.on("message", (raw) => {
-      const m = JSON.parse(raw.toString());
-      if (m.type === "paired") resolve({ ws, session: m.sessionId });
-    });
-  });
+  return new Promise<{ ws: WebSocket; session: string; version: string }>(
+    (resolve, reject) => {
+      const ws = new WebSocket(`wss://localhost:${port}/bridge`, {
+        ca: fs.readFileSync(cert),
+        origin: wsOrigin,
+      });
+      ws.once("error", reject);
+      ws.once("close", () => reject(new Error("pairing rejected")));
+      ws.once("open", () =>
+        ws.send(JSON.stringify({ type: "hello", token: pairing, identity })),
+      );
+      ws.on("message", (raw) => {
+        const m = JSON.parse(raw.toString());
+        if (m.type === "paired")
+          resolve({
+            ws,
+            session: m.sessionId,
+            version: m.runningCompanionVersion,
+          });
+      });
+    },
+  );
 }
 beforeAll(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-mcp-"));
@@ -112,6 +119,21 @@ afterAll(() => {
   if (dir) fs.rmSync(dir, { recursive: true, force: true });
 });
 describe("CompanionDaemon", () => {
+  it("captures the daemon companion version in the paired handshake", async () => {
+    daemon = new CompanionDaemon({
+      origin,
+      token,
+      certPath: cert,
+      keyPath: key,
+      caPath: cert,
+      port: 0,
+    });
+    await daemon.start();
+    port = (daemon.address() as any).port;
+    const client = await connect();
+    expect(client.version).toBe(companionPackage.version);
+    client.ws.close();
+  });
   it("cleans up resources when its port is already occupied", async () => {
     const first = new CompanionDaemon({
       origin,

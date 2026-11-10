@@ -8,7 +8,7 @@ Start with [agent instructions](AGENTS.md) if you are an automated coding agent,
 
 Maintainers preparing anonymous Foundry update assets should see [Public releases](docs/public-releases.md).
 
-The v0.8.2 milestone adds scoped encounter ending, running-version diagnostics, and tested tag-release automation. Its MCP contract has 52 tools. See the [release notes](docs/release-v0.8.2.md) and [validation record](docs/validation-v0.8.2.md) for local packaging and live-verification status. The published v0.9.0 release extends this to 56 tools with native PF2e spell/resource inspection, reviewed cast intents and guarded resource/card creation. See the [spellcasting guide](docs/spellcasting.md) and [v0.9 validation](docs/validation-v0.9.0.md). The v0.9.1 checkout is under live acceptance; prepared-slot casting remains pending fixture preparation. See [live validation](docs/live-validation-v0.9.1.md).
+The published v0.9.1 release contains 56 MCP tools. The v0.10.0 source adds structured version-upgrade guidance and a verified release staging command; no new MCP tools are introduced. See [v0.10.0 release notes](docs/release-v0.10.0.md) and [installation guidance](docs/installation.md).
 
 Foundry v14 is the declared minimum. Version 0.8.1 repairs filtered compendium searches, encounter active-state reporting, and native PF2e ammunition inventory handling. The targeted live retest passed on 2026-11-09 using Foundry 14.363 / PF2e 8.7.0, including fresh encounter start and turn advancement. See the [live retest report](docs/live-retest-v0.8.1-2026-11-09.md) for evidence, limits and test-fixture cleanup; this does not establish compatibility across other versions.
 

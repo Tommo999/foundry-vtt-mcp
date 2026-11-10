@@ -48,6 +48,12 @@ Configure your local MCP client to launch `node` with the absolute path to `pack
 
 The companion daemon must already be running. Use `node packages/companion/dist/cli.js status` to check its connection. Keep MCP protocol messages on standard output; diagnostics go to standard error.
 
+## Check and stage an upgrade
+
+Run `node packages/companion/dist/cli.js upgrade` to check the official public latest stable release. To download and validate its four public release assets into a new directory, run `node packages/companion/dist/cli.js upgrade --stage /path/to/new/foundry-mcp-v0.10.0`. The destination must not already exist. Staging checks release metadata, bounded HTTPS redirects, SHA-256 values, the public manifest and both ZIP contents before it reports installation steps. It does not extract files, execute setup, overwrite an installation, change configuration, restart services or rotate certificates/pairing.
+
+Install the module ZIP through Foundry's Add-on Modules screen (or follow the manual module copy steps above). For a Windows source-bundle setup, use the staged Windows setup ZIP and follow [Windows setup](windows-setup.md); reruns preserve an existing valid configuration and credentials. From a source checkout, update with `git pull --ff-only`, `npm ci`, then `npm run build`. After installation, restart the companion, hard refresh the GM Foundry tab, and reconnect the MCP client. `status` and MCP `get_status` report five component versions; older companions may leave the running companion version unknown until the bridge reconnects.
+
 ## Upgrade from 0.1 to 0.2
 
 Stop the companion with Ctrl+C. From the source checkout, run `npm install` and `npm run package`, then replace the installed module files with the contents of the new `dist/foundry-vtt-mcp.zip`. Reload Foundry in the GM browser, restart the companion with `node packages/companion/dist/cli.js start`, and restart or reconnect the MCP client so it discovers all 18 tools. Keep the existing companion config, certificates and pairing token; do not run `init` or `init --force`. The new GM world setting `MCP asset upload root` defaults to `assets/foundry-mcp`.
@@ -103,7 +109,6 @@ New connections start in approval mode. Review each proposed change in Foundry a
 - **Module not listed:** check that the installed folder is named `foundry-vtt-mcp` and contains `module.json` at its root.
 - **Unsupported tool or mismatched versions:** compare every `get_status.versionDiagnostics` component, restart the companion from the intended checkout, restart the MCP client and hard-refresh the GM browser. Older bridges may return unverified module versions; do not infer that the updated handler ran.
 - **CLI status is current but an agent still has old tools:** CLI status describes that CLI invocation. Call `get_status` through the agent's own MCP connection and restart that connection; another running MCP process can still contain an older build.
-
 
 ## Upgrade to 0.9.0
 

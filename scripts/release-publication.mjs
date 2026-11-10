@@ -88,6 +88,62 @@ function compareVersions(left, right) {
 }
 
 function runUnzip(args, archive) {
+  if (process.platform === "win32") {
+    const operation =
+      args[0] === "-tqq" ? "test" : args[0] === "-Z1" ? "list" : "read";
+    const entry = operation === "read" ? args[2] : "";
+    // Windows 10+ ships bsdtar. It validates compressed data/CRC while writing
+    // selected entries to stdout, never extracting archive paths onto disk.
+    const runTar = (tarArgs) =>
+      spawnSync("tar.exe", tarArgs, {
+        encoding: "utf8",
+        timeout: 30_000,
+        maxBuffer: 32 * 1024 * 1024,
+      });
+    if (operation === "list") {
+      const listed = runTar(["-tf", resolve(archive)]);
+      if (listed.error || listed.status !== 0)
+        fail(
+          "Could not list release ZIP " +
+            archive +
+            ": " +
+            (listed.stderr || listed.error?.message || "tar failed").trim(),
+        );
+      return listed.stdout;
+    }
+    if (operation === "read") {
+      const read = runTar(["-xOf", resolve(archive), "--", entry]);
+      if (read.error || read.status !== 0)
+        fail(
+          "Could not read release ZIP " +
+            archive +
+            ": " +
+            (read.stderr || read.error?.message || "tar failed").trim(),
+        );
+      return read.stdout;
+    }
+    const listed = runTar(["-tf", resolve(archive)]);
+    if (listed.error || listed.status !== 0)
+      fail(
+        "Could not test release ZIP " +
+          archive +
+          ": " +
+          (listed.stderr || listed.error?.message || "tar failed").trim(),
+      );
+    for (const name of listed.stdout
+      .split(/\r?\n/)
+      .filter((value) => value && !value.endsWith("/"))) {
+      const checked = runTar(["-xOf", resolve(archive), "--", name]);
+      if (checked.error || checked.status !== 0)
+        fail(
+          "Could not verify release ZIP entry " +
+            name +
+            ": " +
+            (checked.stderr || checked.error?.message || "tar failed").trim(),
+        );
+    }
+    return "";
+  }
   const result = spawnSync("unzip", args, {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
@@ -419,9 +475,11 @@ async function verifyRemoteDraft({
       if (!Array.isArray(batch))
         fail("GitHub release listing returned an invalid response.");
       matches.push(...batch.filter((candidate) => candidate?.tag_name === tag));
-      if (matches.length > 1) fail("Multiple public releases match the requested tag.");
+      if (matches.length > 1)
+        fail("Multiple public releases match the requested tag.");
       if (batch.length < 100) break;
-      if (page === 5) fail("Public release listing exceeded the bounded lookup window.");
+      if (page === 5)
+        fail("Public release listing exceeded the bounded lookup window.");
     }
     release = matches[0] ?? null;
   }

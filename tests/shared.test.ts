@@ -1,10 +1,44 @@
 import { describe, expect, it } from "vitest";
 import {
+  diagnoseRuntimeVersions,
+  getUpgradeGuidance,
+  isBoundedStableOrPrereleaseVersion,
+} from "@foundry-mcp/shared";
+
+describe("upgrade guidance", () => {
+  it("orders actionable steps for mismatched and legacy unknown versions", () => {
+    const mismatched = diagnoseRuntimeVersions({
+      compiledModule: "0.10.0",
+      installedModuleManifest: "0.9.1",
+      runningCompanion: "0.10.0",
+      mcpClient: "0.10.0",
+      mcpServer: "0.10.0",
+    });
+    expect(mismatched.upgradeGuidance.status).toBe("update-recommended");
+    expect(mismatched.upgradeGuidance.steps).toHaveLength(4);
+    const legacy = getUpgradeGuidance([], ["runningCompanion"]);
+    expect(legacy.status).toBe("unverified");
+    expect(legacy.steps[0]).toContain("Foundry");
+    expect(legacy.steps[1]).toContain("companion");
+    expect(legacy.steps[2]).toContain("refresh");
+    expect(legacy.steps[3]).toContain("Reconnect");
+    expect(JSON.stringify(legacy)).not.toMatch(/token|config|secret|path/i);
+  });
+  it("accepts bounded paired version strings only", () => {
+    expect(isBoundedStableOrPrereleaseVersion("0.10.0")).toBe(true);
+    expect(isBoundedStableOrPrereleaseVersion("0.10.0-rc.1")).toBe(true);
+    expect(isBoundedStableOrPrereleaseVersion("1.2")).toBe(false);
+    expect(isBoundedStableOrPrereleaseVersion("1.2.3/evil")).toBe(false);
+    expect(isBoundedStableOrPrereleaseVersion("1.2.3-" + "x".repeat(70))).toBe(
+      false,
+    );
+  });
+});
+import {
   parseTool,
   toolNames,
   writeTools,
   destructiveTools,
-  diagnoseRuntimeVersions,
 } from "@foundry-mcp/shared";
 
 describe("shared MCP tool contracts", () => {

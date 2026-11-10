@@ -41,6 +41,8 @@ For managed deployments, the PowerShell script supports `-FoundryOrigin`, `-Port
 
 ## Troubleshooting
 
+Use `node packages/companion/dist/cli.js upgrade` for a read-only stable release check. To stage verified public assets, run `foundry-mcp upgrade --stage <new-directory>` from the extracted source bundle. The directory must be new; staging validates all four assets and does not extract or install them. Use the staged Windows setup ZIP for manual setup and rerun the setup script in place to preserve a valid config, certificates and pairing token. Then restart the companion, hard refresh Foundry as GM, and reconnect the MCP client. `check-status.ps1` reports the same runtime version diagnostics as the CLI.
+
 - **`node`, `npm`, or `mkcert` is not found after install:** close and reopen the command window, then rerun. If package installation failed, install the prerequisite manually and retry.
 - **Foundry shows a certificate error:** confirm mkcert trust installation succeeded, keep the generated certificate and key together, and restart the browser. Do not bypass certificate verification. Some browser installations may require their own certificate trust steps.
 - **The configured port is already in use:** setup checks for an existing companion and avoids starting a duplicate. If another application occupies the configured port, choose an unused port on the first run and use that same port in the Foundry module settings.

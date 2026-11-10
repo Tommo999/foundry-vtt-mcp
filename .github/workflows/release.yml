@@ -73,7 +73,7 @@ jobs:
         env:
           FOUNDRY_MCP_PWSH_PATH: powershell.exe
           FOUNDRY_MCP_REQUIRE_POWERSHELL: "1"
-        run: npx vitest run tests/windows-powershell.test.mjs tests/windows-package.test.mjs
+        run: npx vitest run tests/windows-powershell.test.mjs tests/windows-package.test.mjs tests/release-publication.test.mjs
 
   publish:
     name: Publish verified assets to the public repository

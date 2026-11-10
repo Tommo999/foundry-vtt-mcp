@@ -8,6 +8,7 @@ import https from "node:https";
 import { fileURLToPath } from "node:url";
 import { CompanionDaemon, type CompanionConfig } from "./daemon.js";
 import { validateTlsFiles } from "./config.js";
+import { runUpgrade } from "./updater.js";
 const MCP_SERVER_VERSION = companionPackage.version;
 const configDir = () =>
   process.env.FOUNDRY_MCP_CONFIG_DIR ||
@@ -189,6 +190,10 @@ function toolDescription(name: string): string {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
+  if (command === "upgrade") {
+    console.log(await runUpgrade(args));
+    return;
+  }
   if (command === "init") {
     const force = args.includes("--force");
     const values = args.filter((x) => x !== "--force");
@@ -353,7 +358,7 @@ async function main() {
     }
     return;
   }
-  console.error("Usage: foundry-mcp <init|start|mcp|status>");
+  console.error("Usage: foundry-mcp <init|start|mcp|status|upgrade>");
   process.exitCode = 2;
 }
 if (process.argv[1] === fileURLToPath(import.meta.url))

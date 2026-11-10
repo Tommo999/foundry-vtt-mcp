@@ -1,13 +1,13 @@
 {
   "name": "@foundry-mcp/module",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "vite build"
   },
   "dependencies": {
-    "@foundry-mcp/shared": "0.9.1",
+    "@foundry-mcp/shared": "0.10.0",
     "dompurify": "^3.2.6"
   },
   "devDependencies": {

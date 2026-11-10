@@ -14,6 +14,7 @@ import { handlePF2eStrikes } from "./pf2e-strikes";
 import { handlePF2eCombatContext } from "./pf2e-combat-context";
 import { handlePF2eInspectDamageApplication } from "./pf2e-damage-context";
 import { handlePF2eApplyDamage } from "./pf2e-damage-application";
+import { validCurrentPairing } from "./companion-pairing";
 import type { BridgeContext } from "./bridge-context";
 import type { PF2eContext } from "./pf2e-context";
 import {
@@ -51,6 +52,7 @@ type Runtime = {
   token: string;
   autoWrites: boolean;
   sessionId?: string;
+  runningCompanionVersion?: string;
   worldId?: string;
   userId?: string;
   queue: Map<string, Pending>;
@@ -445,7 +447,7 @@ async function execute(
           installedModuleManifest: installedModule
             ? String(installedModule)
             : null,
-          runningCompanion: null,
+          runningCompanion: runtime.runningCompanionVersion ?? null,
           mcpClient: null,
           mcpServer: null,
         });
@@ -1348,7 +1350,9 @@ function receive(raw: MessageEvent) {
     return;
   }
   if (data.type === "paired") {
+    if (!validCurrentPairing(socket, runtime.socket, data)) return;
     runtime.sessionId = String(data.sessionId ?? "");
+    runtime.runningCompanionVersion = data.runningCompanionVersion;
     runtime.worldId = identity().worldId;
     runtime.userId = identity().userId;
     notify(`MCP companion paired with ${gameRef().world.title}.`);
@@ -1420,6 +1424,7 @@ function connect() {
       }
       runtime.queue.clear();
       runtime.sessionId = undefined;
+      runtime.runningCompanionVersion = undefined;
       runtime.worldId = undefined;
       runtime.userId = undefined;
       runtime.app?.render(true);
@@ -1440,6 +1445,7 @@ function disconnect(show = true) {
   }
   runtime.autoWrites = false;
   runtime.sessionId = undefined;
+  runtime.runningCompanionVersion = undefined;
   runtime.worldId = undefined;
   runtime.userId = undefined;
   for (const [id, p] of runtime.queue) {
@@ -1475,7 +1481,25 @@ class BridgeApp extends ApplicationV2 {
       runtime.socket?.readyState === WebSocket.OPEN
         ? "Connected"
         : "Disconnected";
-    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
+    const diagnostics = diagnoseRuntimeVersions({
+      compiledModule: String(moduleManifest.version),
+      installedModuleManifest: gameRef()?.modules?.get?.(MODULE_ID)?.version
+        ? String(gameRef().modules.get(MODULE_ID).version)
+        : null,
+      runningCompanion: runtime.runningCompanionVersion ?? null,
+      mcpClient: null,
+      mcpServer: null,
+    });
+    const versions = Object.entries(diagnostics.versions)
+      .map(
+        ([name, version]) =>
+          `<li>${escapeHtml(name)}: ${escapeHtml(String(version ?? "unknown"))}</li>`,
+      )
+      .join("");
+    const guidance = diagnostics.upgradeGuidance.steps.length
+      ? `<aside class="upgrade-notice"><strong>Version update recommended or unverified</strong><ol>${diagnostics.upgradeGuidance.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></aside>`
+      : "";
+    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><h3>Runtime versions</h3><ul>${versions}</ul>${guidance}<label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
     const list = root.querySelector(".requests")!;
     for (const [id, pending] of runtime.queue) {
       const card = document.createElement("article");

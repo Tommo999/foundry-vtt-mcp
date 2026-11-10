@@ -299,6 +299,20 @@ describe("tagged public release publication gate", () => {
     ).toThrow(/Could not verify release ZIP/);
   });
 
+  it("rejects file data whose archive CRC no longer matches", () => {
+    const directory = bundle();
+    const archivePath = join(directory, "foundry-vtt-mcp.zip");
+    const archive = readFileSync(archivePath);
+    const payload = archive.indexOf(Buffer.from("module bundle"));
+    expect(payload).toBeGreaterThan(0);
+    archive[payload] ^= 1;
+    writeFileSync(archivePath, archive);
+    refreshChecksums(directory);
+    expect(() =>
+      verifyReleaseBundle({ directory, tag: "v0.8.2", repository }),
+    ).toThrow(/Could not verify release ZIP/);
+  });
+
   it("rejects a mismatched module ZIP manifest", () => {
     const directory = bundle();
     writeRawZip(

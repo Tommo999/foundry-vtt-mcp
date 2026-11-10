@@ -31,7 +31,12 @@ type Pending = {
   tool: ToolName;
   releaseUpload?: () => void;
 };
-type Client = { id: string; ws: WebSocket; identity: BridgeIdentity };
+type Client = {
+  id: string;
+  ws: WebSocket;
+  identity: BridgeIdentity;
+  runningCompanionVersion: string;
+};
 const validResult = (x: any) =>
   x &&
   typeof x === "object" &&
@@ -228,8 +233,19 @@ export class CompanionDaemon {
         clearTimeout(handshake);
         const id = crypto.randomUUID();
         this.seen.clear();
-        this.browser = { id, ws, identity: m.identity };
-        ws.send(JSON.stringify({ type: "paired", sessionId: id }));
+        this.browser = {
+          id,
+          ws,
+          identity: m.identity,
+          runningCompanionVersion: companionPackage.version,
+        };
+        ws.send(
+          JSON.stringify({
+            type: "paired",
+            sessionId: id,
+            runningCompanionVersion: this.browser.runningCompanionVersion,
+          }),
+        );
         return;
       }
       const p = this.pending.get(m?.id);
