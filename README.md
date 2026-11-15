@@ -8,7 +8,9 @@ Start with [agent instructions](AGENTS.md) if you are an automated coding agent,
 
 Maintainers preparing anonymous Foundry update assets should see [Public releases](docs/public-releases.md).
 
-The published v0.11.0 release contains 60 MCP tools. The v0.12.0 source adds bounded spell history and evidence-bound reconciliation, bringing discovery to 63 tools. See [v0.12.0 release notes](docs/release-v0.12.0.md), the [spell history and recovery guide](docs/spell-history-recovery.md), and [installation guidance](docs/installation.md).
+See the [roadmap through v0.15](docs/roadmap.md) for release scope, campaign/session examples, dependencies, and acceptance gates.
+
+The published v0.12.0 release contains 63 MCP tools, including bounded spell history and evidence-bound reconciliation. See [v0.12.0 release notes](docs/release-v0.12.0.md), the [spell history and recovery guide](docs/spell-history-recovery.md), and [installation guidance](docs/installation.md).
 
 Foundry v14 is the declared minimum. Version 0.8.1 repairs filtered compendium searches, encounter active-state reporting, and native PF2e ammunition inventory handling. The targeted live retest passed on 2026-11-09 using Foundry 14.363 / PF2e 8.7.0, including fresh encounter start and turn advancement. See the [live retest report](docs/live-retest-v0.8.1-2026-11-09.md) for evidence, limits and test-fixture cleanup; this does not establish compatibility across other versions.
 
