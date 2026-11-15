@@ -50,3 +50,10 @@ Live status check `node packages/companion/dist/cli.js status` returned **ECONNR
 ## Requirement audit
 
 Implemented: four tools, strict source-card/owned entry/spell/rank/context binding; explicit native targets and applicable current combat; expiring session reviews and post-await synchronous guards; native APIs/hooks without global targeting or owned-method mutation; durable reservations/readback/semantic duplicates; one terminal write and honest observed audit status; separate reviewed HP workflow; metadata/docs/discovery/approval integration and source-shaped regressions. Native mixed healing/damage, selected alternate workflows, inferred save/critical scaling, automatic effects/actions/templates and arbitrary formulas remain outside this release's explicit contract. Hosted CI, public archive verification and publication results are appended when complete; no live compatibility claim is inferred from local tests.
+
+
+## Hosted and public release acceptance
+
+Source [commit e1d8345](https://github.com/Tommo999/foundry-vtt-mcp/commit/e1d8345) was pushed before the next milestone. [Hosted CI](https://github.com/Tommo999/foundry-vtt-mcp/actions/runs/43669606548) passed Node tests/typecheck/build and actual Windows PowerShell/archive verification. Final `verify-local` passed; built shared tool names and tool-reference rows were exactly **60/60**, with no missing or unknown entries.
+
+Published [v0.11.0](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.11.0) as latest stable after public preflight and exact draft identity/size/hash verification. `verify-published` passed all four anonymous downloads. Distribution remains the exact manifest, module ZIP, Windows setup ZIP and checksums; source history and test/campaign reports were not copied into the public repository. Prior versioned assets remain preserved. Matching-build live acceptance is still pending because the local companion connection was refused; publication is not deployment or live validation.
