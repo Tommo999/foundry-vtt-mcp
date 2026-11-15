@@ -10,6 +10,7 @@ import { handleSessionSnapshot } from "./session-snapshot";
 import { handlePF2eChecks } from "./pf2e-checks";
 import { handlePF2eSpellcasting } from "./pf2e-spellcasting";
 import { handlePF2eSpellCast } from "./pf2e-spell-cast";
+import { handlePF2eSpellResolution } from "./pf2e-spell-resolution";
 import { handlePF2eStrikes } from "./pf2e-strikes";
 import { handlePF2eCombatContext } from "./pf2e-combat-context";
 import { handlePF2eInspectDamageApplication } from "./pf2e-damage-context";
@@ -528,6 +529,17 @@ async function execute(
       case "pf2e_inspect_spell_cast":
       case "pf2e_cast_spell": {
         const data = await handlePF2eSpellCast(
+          tool,
+          args,
+          pf2eContext(session, socket!, authorization),
+        );
+        return { ok: true, data };
+      }
+      case "pf2e_inspect_spell_resolution":
+      case "pf2e_roll_spell_attack":
+      case "pf2e_roll_spell_save":
+      case "pf2e_roll_spell_damage": {
+        const data = await handlePF2eSpellResolution(
           tool,
           args,
           pf2eContext(session, socket!, authorization),
@@ -1658,6 +1670,14 @@ g.Hooks.once("ready", () => {
   });
   gameRef().settings.register(MODULE_ID, "spellCasts", {
     name: "Spell cast audit records",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { version: 1, entries: {} },
+    restricted: true,
+  });
+  gameRef().settings.register(MODULE_ID, "spellResolutions", {
+    name: "Spell resolution audit records",
     scope: "world",
     config: false,
     type: Object,

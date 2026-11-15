@@ -108,6 +108,14 @@ function toolDescription(name: string): string {
       "Inspect one explicit PF2e caster token, owned entry, spell, computed rank, slot, targets and message mode. Returns a short-lived single-use castId and reviewToken bound to current native resources and combat state. Read-only; does not consume resources or create chat.",
     pf2e_cast_spell:
       "Cast the exact spell selection returned by pf2e_inspect_spell_cast using PF2e's native resource consumption and native actual-cast chat card. Requires GM approval, the same selection, castId, reviewToken and expectedCombat. Targets are recorded context only; no saves, attacks, effects, templates or HP are applied. Uncertain outcomes require manual inspection and must not be retried blindly.",
+    pf2e_inspect_spell_resolution:
+      "Preview one native PF2e spell attack, saving throw, or base-damage roll for an exact bridge-confirmed actual-cast card, caster token, same-scene target token, visibility and current encounter state. Read-only; returns a short-lived review token and semantic duplicate-check status.",
+    pf2e_roll_spell_attack:
+      "Roll the exact previewed native PF2e spell attack with its selected attack number and explicit caster and target. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not resolve saves, damage, effects or HP; inspect chat and audit status before retrying any uncertain result.",
+    pf2e_roll_spell_save:
+      "Roll the target's native Fortitude, Reflex or Will save against the confirmed caster's native spell DC for the exact previewed cast. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not apply success-scaled damage or effects; inspect chat and audit status before retrying any uncertain result.",
+    pf2e_roll_spell_damage:
+      "Roll native base damage for the exact previewed cast using PF2e's damage pipeline and explicit target context where the spell is an attack. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not scale by saves/critical outcomes or apply HP; inspect chat and audit status before retrying any uncertain result.",
     pf2e_roll_initiative:
       "Roll PF2e initiative for selected encounter combatants using each actor's configured initiative statistic (including Stealth if configured). Skips combatants with existing initiative unless reroll is true. Uses native PF2e rolls and tracker updates; messageMode defaults to GM-only. Requires GM approval and must not be automatically retried.",
     start_encounter:

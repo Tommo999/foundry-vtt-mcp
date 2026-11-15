@@ -4,9 +4,13 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   checks: vi.fn(),
   encounters: vi.fn(),
+  spellResolution: vi.fn(),
 }));
 vi.mock("../src/pf2e-checks", () => ({ handlePF2eChecks: mocks.checks }));
 vi.mock("../src/encounters", () => ({ handleEncounters: mocks.encounters }));
+vi.mock("../src/pf2e-spell-resolution", () => ({
+  handlePF2eSpellResolution: mocks.spellResolution,
+}));
 
 class MockApplicationV2 {
   render() {}
@@ -87,9 +91,119 @@ beforeEach(() => {
         ctx.assertWrite();
       return { routed: tool };
     });
+  mocks.spellResolution
+    .mockReset()
+    .mockImplementation(async (tool: string, _args: any, ctx: any) => {
+      if (
+        ctx.game.system?.id !== "pf2e" ||
+        ctx.game.settings.get("foundry-vtt-mcp", "pf2eEnabled") === false
+      )
+        throw Object.assign(new Error("PF2e is unavailable"), {
+          code: "PF2E_UNAVAILABLE",
+        });
+      if (tool !== "pf2e_inspect_spell_resolution") ctx.assertWrite();
+      return { routed: tool };
+    });
 });
 
 describe("v0.6 PF2e checks and combat integration", () => {
+  it("dispatches all spell-resolution tools, keeps preview read-only and requires approval for rolls", async () => {
+    const selection = {
+      castMessageUuid: "ChatMessage.cast",
+      casterTokenUuid: "Scene.s.Token.caster",
+      targetTokenUuid: "Scene.s.Token.target",
+      messageMode: "gm",
+    };
+    const preview = await api.__test.execute(
+      "pf2e_inspect_spell_resolution",
+      { ...selection, action: "attack", attackNumber: 3 },
+      undefined,
+      socket,
+    );
+    expect(preview).toMatchObject({
+      ok: true,
+      data: { routed: "pf2e_inspect_spell_resolution" },
+    });
+    expect(mocks.spellResolution).toHaveBeenCalledOnce();
+
+    for (const [index, [tool, action]] of [
+      ["pf2e_roll_spell_attack", "attack"],
+      ["pf2e_roll_spell_save", "save"],
+      ["pf2e_roll_spell_damage", "damage"],
+    ].entries()) {
+      const id = `spell-resolution-approval-${index}`;
+      await api.__test.handleRequest(
+        {
+          type: "request",
+          id,
+          tool,
+          args: {
+            ...selection,
+            action,
+            attackNumber: 1,
+            resolutionId: `spell-resolution-${index}`,
+            reviewToken: `review-${index}`,
+            expectedCombat: null,
+          },
+        },
+        socket,
+      );
+      expect(mocks.spellResolution).toHaveBeenCalledTimes(index + 1);
+      await new api.__test.BridgeApp().approve(id);
+      expect(mocks.spellResolution).toHaveBeenCalledTimes(index + 2);
+      expect(mocks.spellResolution.mock.calls.at(-1)?.[0]).toBe(tool);
+    }
+  });
+
+  it("checks PF2e enablement and rechecks the paired session before a spell-resolution write", async () => {
+    const selection = {
+      castMessageUuid: "ChatMessage.cast",
+      casterTokenUuid: "Scene.s.Token.caster",
+      targetTokenUuid: "Scene.s.Token.target",
+      action: "attack",
+      attackNumber: 1,
+      messageMode: "gm",
+    };
+    game.settings.get = (_module: string, key: string) =>
+      key === "pf2eEnabled" ? false : true;
+    await expect(
+      api.__test.execute(
+        "pf2e_inspect_spell_resolution",
+        selection,
+        undefined,
+        socket,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "PF2E_UNAVAILABLE" },
+    });
+
+    game.settings.get = () => true;
+    mocks.spellResolution.mockImplementationOnce(
+      async (_tool: string, _args: any, ctx: any) => {
+        await Promise.resolve();
+        api.__test.runtime.sessionId = "replacement-session";
+        ctx.assertWrite();
+      },
+    );
+    await expect(
+      api.__test.execute(
+        "pf2e_roll_spell_attack",
+        {
+          ...selection,
+          resolutionId: "spell-resolution-session",
+          reviewToken: "review-session",
+          expectedCombat: null,
+        },
+        undefined,
+        socket,
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "SESSION_CHANGED" },
+    });
+  });
+
   it("reports compiled module code separately from the installed manifest", async () => {
     game.modules = new Map([["foundry-vtt-mcp", { version: "0.8.0" }]]);
     const result = await api.__test.execute(

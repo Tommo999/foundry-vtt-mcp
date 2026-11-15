@@ -8,7 +8,7 @@ describe("companion version handshake", () => {
       validCurrentPairing(socket, socket, {
         type: "paired",
         sessionId: "session",
-        runningCompanionVersion: "0.10.0",
+        runningCompanionVersion: "0.11.0",
       }),
     ).toBe(true);
     expect(
@@ -28,7 +28,7 @@ describe("companion version handshake", () => {
       validCurrentPairing(socket, socket, {
         type: "paired",
         sessionId: "",
-        runningCompanionVersion: "0.10.0",
+        runningCompanionVersion: "0.11.0",
       }),
     ).toBe(false);
     expect(

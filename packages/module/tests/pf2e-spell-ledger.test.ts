@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  readConfirmedSpellCastByMessage,
   readSpellCastActorSummary,
   withSpellCastLedger,
   type SpellCastRecord,
@@ -538,5 +539,24 @@ describe("PF2e spell-cast ledger", () => {
       resourceAfter: none,
       chatMessageUuid: "ChatMessage.message-1",
     });
+  });
+
+  it("correlates only a confirmed cast card in the active world", async () => {
+    const fake = makeContext();
+    await withSpellCastLedger(fake.ctx, async (ledger) => {
+      await ledger.reserve(reservation());
+      await ledger.finalize("cast-1", "confirmed", {
+        nativeConsumed: true,
+        resourceAfter: { ...slot, value: 0 },
+        chatMessageUuid: "ChatMessage.message-1",
+      });
+    });
+    expect(
+      readConfirmedSpellCastByMessage(fake.ctx, "ChatMessage.message-1").castId,
+    ).toBe("cast-1");
+    fake.ctx.game.world.id = "world-other";
+    expect(() =>
+      readConfirmedSpellCastByMessage(fake.ctx, "ChatMessage.message-1"),
+    ).toThrowError(expect.objectContaining({ code: "CAST_CARD_UNCONFIRMED" }));
   });
 });

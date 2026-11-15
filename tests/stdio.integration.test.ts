@@ -133,7 +133,34 @@ describe("companion MCP stdio integration", () => {
     expect(result.tools.map((tool) => tool.name)).toContain(
       "pf2e_apply_damage",
     );
-    expect(result.tools).toHaveLength(56);
+    for (const name of [
+      "pf2e_inspect_spell_resolution",
+      "pf2e_roll_spell_attack",
+      "pf2e_roll_spell_save",
+      "pf2e_roll_spell_damage",
+    ])
+      expect(result.tools.map((tool) => tool.name)).toContain(name);
+    expect(result.tools).toHaveLength(60);
+    const spellPreview = result.tools.find(
+      (tool) => tool.name === "pf2e_inspect_spell_resolution",
+    );
+    expect(spellPreview?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+    });
+    expect(spellPreview?.description).toMatch(/actual-cast card/i);
+    for (const name of [
+      "pf2e_roll_spell_attack",
+      "pf2e_roll_spell_save",
+      "pf2e_roll_spell_damage",
+    ]) {
+      const tool = result.tools.find((candidate) => candidate.name === name);
+      expect(tool?.annotations).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: false,
+      });
+      expect(tool?.description).toMatch(/approval/i);
+    }
     expect(
       result.tools.find((tool) => tool.name === "end_encounter")?.annotations,
     ).toMatchObject({ readOnlyHint: false, destructiveHint: true });

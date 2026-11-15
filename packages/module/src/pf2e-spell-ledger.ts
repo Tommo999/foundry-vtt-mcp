@@ -775,3 +775,29 @@ export function readSpellCastActorSummary(
   sameWorld(ctx, worldId);
   return actorSummary(readLedger(ctx), actorUuid, limit);
 }
+
+/** Read-only correlation lookup for a native actual-cast chat card. */
+export function readConfirmedSpellCastByMessage(
+  ctx: BridgeContext,
+  chatMessageUuid: string,
+): SpellCastRecord {
+  const id = worldIdOf(ctx);
+  if (!uuid(chatMessageUuid))
+    throw fault(
+      "INVALID_INPUT",
+      "castMessageUuid must be a bounded ChatMessage UUID.",
+    );
+  sameWorld(ctx, id);
+  const matches = Object.values(readLedger(ctx).entries).filter(
+    (record) =>
+      record.worldId === id &&
+      record.chatMessageUuid === chatMessageUuid &&
+      record.status === "confirmed",
+  );
+  if (matches.length !== 1)
+    throw fault(
+      "CAST_CARD_UNCONFIRMED",
+      "The message does not identify exactly one confirmed bridge spell-cast record.",
+    );
+  return recordCopy(matches[0]);
+}

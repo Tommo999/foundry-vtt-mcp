@@ -8,11 +8,11 @@ import {
 describe("upgrade guidance", () => {
   it("orders actionable steps for mismatched and legacy unknown versions", () => {
     const mismatched = diagnoseRuntimeVersions({
-      compiledModule: "0.10.0",
+      compiledModule: "0.11.0",
       installedModuleManifest: "0.9.1",
-      runningCompanion: "0.10.0",
-      mcpClient: "0.10.0",
-      mcpServer: "0.10.0",
+      runningCompanion: "0.11.0",
+      mcpClient: "0.11.0",
+      mcpServer: "0.11.0",
     });
     expect(mismatched.upgradeGuidance.status).toBe("update-recommended");
     expect(mismatched.upgradeGuidance.steps).toHaveLength(4);
@@ -25,8 +25,8 @@ describe("upgrade guidance", () => {
     expect(JSON.stringify(legacy)).not.toMatch(/token|config|secret|path/i);
   });
   it("accepts bounded paired version strings only", () => {
-    expect(isBoundedStableOrPrereleaseVersion("0.10.0")).toBe(true);
-    expect(isBoundedStableOrPrereleaseVersion("0.10.0-rc.1")).toBe(true);
+    expect(isBoundedStableOrPrereleaseVersion("0.11.0")).toBe(true);
+    expect(isBoundedStableOrPrereleaseVersion("0.11.0-rc.1")).toBe(true);
     expect(isBoundedStableOrPrereleaseVersion("1.2")).toBe(false);
     expect(isBoundedStableOrPrereleaseVersion("1.2.3/evil")).toBe(false);
     expect(isBoundedStableOrPrereleaseVersion("1.2.3-" + "x".repeat(70))).toBe(
@@ -79,6 +79,10 @@ describe("shared MCP tool contracts", () => {
       "pf2e_inspect_resources",
       "pf2e_inspect_spell_cast",
       "pf2e_cast_spell",
+      "pf2e_inspect_spell_resolution",
+      "pf2e_roll_spell_attack",
+      "pf2e_roll_spell_save",
+      "pf2e_roll_spell_damage",
       "pf2e_roll_initiative",
       "start_encounter",
       "next_turn",
@@ -127,6 +131,53 @@ describe("shared MCP tool contracts", () => {
       "create_embedded",
       "import_compendium",
     ]);
+    expect(toolNames).toHaveLength(60);
+  });
+  it("classifies spell-resolution tools and constrains attack numbers", () => {
+    const selection = {
+      castMessageUuid: "ChatMessage.cast",
+      casterTokenUuid: "Scene.s.Token.caster",
+      targetTokenUuid: "Scene.s.Token.target",
+      messageMode: "gm" as const,
+    };
+    expect(
+      parseTool("pf2e_inspect_spell_resolution", {
+        ...selection,
+        action: "attack",
+        attackNumber: 3,
+      }).tool,
+    ).toBe("pf2e_inspect_spell_resolution");
+    expect(() =>
+      parseTool("pf2e_inspect_spell_resolution", {
+        ...selection,
+        action: "save",
+        attackNumber: 2,
+      }),
+    ).toThrow();
+    for (const tool of [
+      "pf2e_roll_spell_attack",
+      "pf2e_roll_spell_save",
+      "pf2e_roll_spell_damage",
+    ] as const) {
+      expect(writeTools.has(tool)).toBe(true);
+      expect(destructiveTools.has(tool)).toBe(false);
+    }
+    expect(writeTools.has("pf2e_inspect_spell_resolution")).toBe(false);
+    const execution = {
+      ...selection,
+      resolutionId: "spell-resolution-a",
+      reviewToken: "review-a",
+      expectedCombat: null,
+    };
+    expect(
+      parseTool("pf2e_roll_spell_save", { ...execution, attackNumber: 1 }).tool,
+    ).toBe("pf2e_roll_spell_save");
+    expect(() =>
+      parseTool("pf2e_roll_spell_save", { ...execution, attackNumber: 2 }),
+    ).toThrow();
+    expect(() =>
+      parseTool("pf2e_roll_spell_damage", { ...execution, attackNumber: 2 }),
+    ).toThrow();
   });
   it("validates v0.7 combat selectors and expected state", () => {
     const current = {

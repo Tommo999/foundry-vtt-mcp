@@ -25,6 +25,14 @@ const spellCastSelection = {
     }),
   messageMode: z.enum(["public", "gm", "blind", "self"]).default("gm"),
 };
+const spellResolutionSelection = {
+  castMessageUuid: z.string().min(1).max(512),
+  casterTokenUuid: z.string().min(1).max(512),
+  targetTokenUuid: z.string().min(1).max(512),
+  action: z.enum(["attack", "save", "damage"]),
+  attackNumber: z.number().int().min(1).max(3).default(1),
+  messageMode: z.enum(["public", "gm", "blind", "self"]).default("gm"),
+};
 const expectedCombat = z
   .object({
     encounterUuid: z.string().min(1).max(512),
@@ -109,6 +117,45 @@ export const toolSchemas = {
       expectedCombat,
     })
     .strict(),
+  pf2e_inspect_spell_resolution: z
+    .object(spellResolutionSelection)
+    .strict()
+    .refine((value) => value.action === "attack" || value.attackNumber === 1, {
+      message: "Only spell attacks accept attackNumber above one.",
+    }),
+  pf2e_roll_spell_attack: z
+    .object({
+      ...spellResolutionSelection,
+      action: z.literal("attack").default("attack"),
+      resolutionId: z.string().min(1).max(128),
+      reviewToken: z.string().min(1).max(128),
+      expectedCombat,
+    })
+    .strict(),
+  pf2e_roll_spell_save: z
+    .object({
+      ...spellResolutionSelection,
+      action: z.literal("save").default("save"),
+      resolutionId: z.string().min(1).max(128),
+      reviewToken: z.string().min(1).max(128),
+      expectedCombat,
+    })
+    .strict()
+    .refine((value) => value.attackNumber === 1, {
+      message: "Spell saves do not accept attackNumber above one.",
+    }),
+  pf2e_roll_spell_damage: z
+    .object({
+      ...spellResolutionSelection,
+      action: z.literal("damage").default("damage"),
+      resolutionId: z.string().min(1).max(128),
+      reviewToken: z.string().min(1).max(128),
+      expectedCombat,
+    })
+    .strict()
+    .refine((value) => value.attackNumber === 1, {
+      message: "Spell damage does not accept attackNumber above one.",
+    }),
   pf2e_roll_initiative: z.object({
     encounterUuid: z.string().min(1),
     combatantUuids: encounterUuidList,
@@ -412,6 +459,9 @@ export const toolNames = Object.keys(toolSchemas) as ToolName[];
 export const writeTools = new Set<ToolName>([
   "pf2e_apply_damage",
   "pf2e_cast_spell",
+  "pf2e_roll_spell_attack",
+  "pf2e_roll_spell_save",
+  "pf2e_roll_spell_damage",
   "pf2e_roll_strike",
   "pf2e_roll_damage",
   "pf2e_roll_check",

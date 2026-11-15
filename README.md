@@ -8,7 +8,7 @@ Start with [agent instructions](AGENTS.md) if you are an automated coding agent,
 
 Maintainers preparing anonymous Foundry update assets should see [Public releases](docs/public-releases.md).
 
-The published v0.9.1 release contains 56 MCP tools. The v0.10.0 source adds structured version-upgrade guidance and a verified release staging command; no new MCP tools are introduced. See [v0.10.0 release notes](docs/release-v0.10.0.md) and [installation guidance](docs/installation.md).
+The published v0.10.0 release contains 56 MCP tools. The v0.11.0 source adds four native PF2e spell-resolution tools, bringing discovery to 60 tools. See [v0.11.0 release notes](docs/release-v0.11.0.md), the [spell-resolution guide](docs/spell-resolution.md), and [installation guidance](docs/installation.md).
 
 Foundry v14 is the declared minimum. Version 0.8.1 repairs filtered compendium searches, encounter active-state reporting, and native PF2e ammunition inventory handling. The targeted live retest passed on 2026-11-09 using Foundry 14.363 / PF2e 8.7.0, including fresh encounter start and turn advancement. See the [live retest report](docs/live-retest-v0.8.1-2026-11-09.md) for evidence, limits and test-fixture cleanup; this does not establish compatibility across other versions.
 

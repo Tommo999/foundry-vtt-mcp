@@ -4,64 +4,68 @@ The companion publishes a system-agnostic Foundry core through MCP. Inputs are v
 
 The PF2e tools are also listed for MCP clients in every game system. They require the PF2e system and report a clear unavailable status elsewhere. System-specific data and rules are handled by the PF2e adapter; the general document and encounter-preparation tools remain system agnostic.
 
-| Tool                              | Purpose                                                                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `pf2e_roll_check`                 | Roll a PF2e Perception, skill or saving throw using the prepared statistic and native modifiers; posts a Foundry chat roll. |
-| `pf2e_inspect_actions`            | Inspect bounded PF2e action, strike and check information without executing it.                                             |
-| `pf2e_roll_initiative`            | Roll initiative for selected combatants using their configured PF2e initiative statistic.                                   |
-| `start_encounter`                 | Activate and start an encounter after all combatants have initiative.                                                       |
-| `next_turn`                       | Advance one turn if the supplied expected round, turn and combatant still match.                                            |
-| `end_encounter`                   | End the current started world encounter after checking its exact expected tracker state; runs native Combat removal hooks. |
-| `pf2e_combat_context`             | Inspect the current PF2e combatant, explicit token candidates and native strike selectors without rolling.                 |
-| `pf2e_roll_strike`                | Roll a native on-turn weapon strike at the selected MAP against an explicit target; ammunition consumption stays disabled. |
-| `pf2e_roll_damage`                | Roll native strike damage or explicitly selected critical damage into GM chat without applying HP changes.               |
-| `search_content`                  | Search world Actors, Items, JournalEntries and Scenes by name and text content.                                             |
-| `list_folders`                    | List world folders, optionally filtered by document type.                                                                   |
-| `create_folder`                   | Create a typed folder, optionally nested under a parent folder.                                                             |
-| `move_document`                   | Move a supported world document into a folder or to the root.                                                               |
-| `browse_assets`                   | Browse image assets under a safe relative directory in Foundry's Data storage, with path filtering and pagination.          |
-| `upload_asset`                    | Upload a supported image to the module asset folder using base64 data or a local path on the companion computer.            |
-| `inspect_scene`                   | Return a bounded summary of scene dimensions, grid, tokens, walls, lights, levels and notes.                                |
-| `add_map_note`                    | Add a journal-linked note at scene coordinates, optionally targeting a journal page.                                        |
-| `get_status`                      | Report GM connection/world/system information and distinguish loaded module, manifest, companion and MCP versions.         |
-| `list_encounters`                 | List bounded combat preparation records, optionally filtered by scene.                                                      |
-| `inspect_encounter`               | Read a combat preparation record and its combatants with pagination.                                                        |
-| `create_encounter`                | Create an inactive, unstarted combat record for a selected scene.                                                           |
-| `add_combatants`                  | Add selected scene token UUIDs to an unstarted preparation record; duplicates are skipped.                                  |
-| `remove_combatants`               | Remove explicitly selected combatant UUIDs from an unstarted preparation record.                                            |
-| `session_snapshot`                | Return bounded, factual party, scene, encounter and journal data for an agent to summarize.                                 |
-| `discover_types`                  | List supported document types, or inspect the active system's Actor and Item subtypes and schema fields.                    |
-| `search_world`                    | Find world Actors, Items, JournalEntries or Scenes by name with offset and limit pagination.                                |
-| `list_compendiums`                | List available compendium packs with pagination.                                                                            |
-| `search_compendium`               | Search a pack's index by name and return matching entries with pagination and their compendium UUIDs.                       |
-| `get_document`                    | Read a document by its Foundry UUID, including compendium UUIDs.                                                            |
-| `create_document`                 | Create a world Actor, Item, JournalEntry or Scene.                                                                          |
-| `update_document`                 | Update a supported world document or embedded page by UUID.                                                                 |
-| `create_embedded`                 | Create a JournalEntryPage in a JournalEntry, an Item in an Actor, or a Token in a Scene.                                    |
-| `import_compendium`               | Import a supported compendium Actor, Item, JournalEntry or Scene into the world from its UUID.                              |
-| `pf2e_status`                     | Report whether the PF2e adapter is available and its detected capabilities.                                                 |
+| Tool                              | Purpose                                                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pf2e_roll_check`                 | Roll a PF2e Perception, skill or saving throw using the prepared statistic and native modifiers; posts a Foundry chat roll.                      |
+| `pf2e_inspect_actions`            | Inspect bounded PF2e action, strike and check information without executing it.                                                                  |
+| `pf2e_roll_initiative`            | Roll initiative for selected combatants using their configured PF2e initiative statistic.                                                        |
+| `start_encounter`                 | Activate and start an encounter after all combatants have initiative.                                                                            |
+| `next_turn`                       | Advance one turn if the supplied expected round, turn and combatant still match.                                                                 |
+| `end_encounter`                   | End the current started world encounter after checking its exact expected tracker state; runs native Combat removal hooks.                       |
+| `pf2e_combat_context`             | Inspect the current PF2e combatant, explicit token candidates and native strike selectors without rolling.                                       |
+| `pf2e_roll_strike`                | Roll a native on-turn weapon strike at the selected MAP against an explicit target; ammunition consumption stays disabled.                       |
+| `pf2e_roll_damage`                | Roll native strike damage or explicitly selected critical damage into GM chat without applying HP changes.                                       |
+| `search_content`                  | Search world Actors, Items, JournalEntries and Scenes by name and text content.                                                                  |
+| `list_folders`                    | List world folders, optionally filtered by document type.                                                                                        |
+| `create_folder`                   | Create a typed folder, optionally nested under a parent folder.                                                                                  |
+| `move_document`                   | Move a supported world document into a folder or to the root.                                                                                    |
+| `browse_assets`                   | Browse image assets under a safe relative directory in Foundry's Data storage, with path filtering and pagination.                               |
+| `upload_asset`                    | Upload a supported image to the module asset folder using base64 data or a local path on the companion computer.                                 |
+| `inspect_scene`                   | Return a bounded summary of scene dimensions, grid, tokens, walls, lights, levels and notes.                                                     |
+| `add_map_note`                    | Add a journal-linked note at scene coordinates, optionally targeting a journal page.                                                             |
+| `get_status`                      | Report GM connection/world/system information and distinguish loaded module, manifest, companion and MCP versions.                               |
+| `list_encounters`                 | List bounded combat preparation records, optionally filtered by scene.                                                                           |
+| `inspect_encounter`               | Read a combat preparation record and its combatants with pagination.                                                                             |
+| `create_encounter`                | Create an inactive, unstarted combat record for a selected scene.                                                                                |
+| `add_combatants`                  | Add selected scene token UUIDs to an unstarted preparation record; duplicates are skipped.                                                       |
+| `remove_combatants`               | Remove explicitly selected combatant UUIDs from an unstarted preparation record.                                                                 |
+| `session_snapshot`                | Return bounded, factual party, scene, encounter and journal data for an agent to summarize.                                                      |
+| `discover_types`                  | List supported document types, or inspect the active system's Actor and Item subtypes and schema fields.                                         |
+| `search_world`                    | Find world Actors, Items, JournalEntries or Scenes by name with offset and limit pagination.                                                     |
+| `list_compendiums`                | List available compendium packs with pagination.                                                                                                 |
+| `search_compendium`               | Search a pack's index by name and return matching entries with pagination and their compendium UUIDs.                                            |
+| `get_document`                    | Read a document by its Foundry UUID, including compendium UUIDs.                                                                                 |
+| `create_document`                 | Create a world Actor, Item, JournalEntry or Scene.                                                                                               |
+| `update_document`                 | Update a supported world document or embedded page by UUID.                                                                                      |
+| `create_embedded`                 | Create a JournalEntryPage in a JournalEntry, an Item in an Actor, or a Token in a Scene.                                                         |
+| `import_compendium`               | Import a supported compendium Actor, Item, JournalEntry or Scene into the world from its UUID.                                                   |
+| `pf2e_status`                     | Report whether the PF2e adapter is available and its detected capabilities.                                                                      |
 | `pf2e_search_compendium`          | Search PF2e creature, hazard and equipment packs by text and supported type-specific filters, including hazard complexity and native ammunition. |
-| `pf2e_party_summary`              | Summarize PF2e party members for encounter planning.                                                                        |
-| `pf2e_import_document`            | Import one native PF2e compendium document, optionally applying the system's elite or weak adjustment.                      |
-| `pf2e_analyze_encounter`          | Calculate PF2e encounter XP and difficulty for a supplied participant list and party. It does not award XP.                 |
-| `pf2e_stage_encounter`            | Prepare hidden scene tokens for an encounter; it does not create or start combat.                                           |
-| `pf2e_inspect_conditions`         | Inspect a PF2e Actor's current conditions and values.                                                                       |
-| `pf2e_inspect_damage_application` | Inspect a selected native chat damage roll for an explicit PF2e scene token and return a review token.                      |
-| `pf2e_apply_damage`               | Apply that inspected roll to the same target with the same options after GM approval.                                       |
-| `pf2e_set_condition`              | Set one condition to an exact value, or apply an unvalued condition.                                                        |
-| `pf2e_adjust_condition`           | Increase, decrease or remove one identified condition.                                                                      |
-| `pf2e_apply_effect`               | Apply a PF2e compendium effect using its native duration and grant rules.                                                   |
-| `pf2e_remove_effect`              | Remove one identified PF2e effect.                                                                                          |
-| `pf2e_inventory`                  | Inspect an Actor's physical inventory, including native ammunition, and coin denominations.                                |
-| `pf2e_inspect_spellcasting`        | Inspect bounded native PF2e spellcasting entries and options, prepared positions, ranks, signatures and resource readiness. |
-| `pf2e_inspect_spell_cast`        | Preview an explicit native cast and return an expiring session-bound intent, resource facts and combat snapshot. |
-| `pf2e_cast_spell`                | Execute that exact reviewed cast through native resource and chat APIs after approval; no automatic effects. |
-| `pf2e_inspect_resources`           | Inspect native focus/hero points and bounded spell-slot, innate-use and owned-item resource facts without spending them. |
-| `pf2e_add_inventory_item`         | Add a PF2e compendium physical item, including ammunition, with a positive quantity.                                         |
-| `pf2e_set_item_quantity`          | Set an existing inventory item's quantity.                                                                                  |
-| `pf2e_transfer_item`              | Transfer an inventory item and quantity between Actors.                                                                     |
-| `pf2e_add_coins`                  | Add positive coin amounts by denomination to an Actor.                                                                      |
-| `pf2e_create_loot`                | Create a PF2e loot Actor with supported items and coins.                                                                    |
+| `pf2e_party_summary`              | Summarize PF2e party members for encounter planning.                                                                                             |
+| `pf2e_import_document`            | Import one native PF2e compendium document, optionally applying the system's elite or weak adjustment.                                           |
+| `pf2e_analyze_encounter`          | Calculate PF2e encounter XP and difficulty for a supplied participant list and party. It does not award XP.                                      |
+| `pf2e_stage_encounter`            | Prepare hidden scene tokens for an encounter; it does not create or start combat.                                                                |
+| `pf2e_inspect_conditions`         | Inspect a PF2e Actor's current conditions and values.                                                                                            |
+| `pf2e_inspect_damage_application` | Inspect a selected native chat damage roll for an explicit PF2e scene token and return a review token.                                           |
+| `pf2e_apply_damage`               | Apply that inspected roll to the same target with the same options after GM approval.                                                            |
+| `pf2e_set_condition`              | Set one condition to an exact value, or apply an unvalued condition.                                                                             |
+| `pf2e_adjust_condition`           | Increase, decrease or remove one identified condition.                                                                                           |
+| `pf2e_apply_effect`               | Apply a PF2e compendium effect using its native duration and grant rules.                                                                        |
+| `pf2e_remove_effect`              | Remove one identified PF2e effect.                                                                                                               |
+| `pf2e_inventory`                  | Inspect an Actor's physical inventory, including native ammunition, and coin denominations.                                                      |
+| `pf2e_inspect_spellcasting`       | Inspect bounded native PF2e spellcasting entries and options, prepared positions, ranks, signatures and resource readiness.                      |
+| `pf2e_inspect_spell_cast`         | Preview an explicit native cast and return an expiring session-bound intent, resource facts and combat snapshot.                                 |
+| `pf2e_cast_spell`                 | Execute that exact reviewed cast through native resource and chat APIs after approval; no automatic effects.                                     |
+| `pf2e_inspect_spell_resolution`   | Preview an attack, save or base-damage roll for an exact confirmed cast card and explicit same-scene tokens.                                     |
+| `pf2e_roll_spell_attack`          | Roll the exact previewed native spell attack with explicit target and selected MAP.                                                              |
+| `pf2e_roll_spell_save`            | Roll one target's native save against the current spell DC from the confirmed cast.                                                              |
+| `pf2e_roll_spell_damage`          | Roll native base damage for the exact cast without scaling or applying HP.                                                                       |
+| `pf2e_inspect_resources`          | Inspect native focus/hero points and bounded spell-slot, innate-use and owned-item resource facts without spending them.                         |
+| `pf2e_add_inventory_item`         | Add a PF2e compendium physical item, including ammunition, with a positive quantity.                                                             |
+| `pf2e_set_item_quantity`          | Set an existing inventory item's quantity.                                                                                                       |
+| `pf2e_transfer_item`              | Transfer an inventory item and quantity between Actors.                                                                                          |
+| `pf2e_add_coins`                  | Add positive coin amounts by denomination to an Actor.                                                                                           |
+| `pf2e_create_loot`                | Create a PF2e loot Actor with supported items and coins.                                                                                         |
 
 ## Example: create a journal and page
 
@@ -184,13 +188,21 @@ Replace every example identifier and state value with the values returned for th
 
 ## PF2e spellcasting (v0.9)
 
-The four spellcasting tools extend the contract to 56 tools. See the [spellcasting guide](spellcasting.md) for the complete preview/execution workflow and reconciliation limits. Live acceptance requires matching loaded builds; see [validation](validation-v0.9.0.md).
+The four v0.9 spellcasting tools inspect native entries/resources and cast spells. See the [spellcasting guide](spellcasting.md) for that preview/execution workflow and reconciliation limits.
 
 Both tools accept `targetUuid` for a root world character/NPC Actor or an explicit world scene token, plus `offset` and `limit` (default 25, maximum 100). Linked and synthetic token Actors are supported. `pf2e_inspect_spellcasting` also accepts an optional owned `entryUuid` filter. It returns paginated `options`, bounded entry summaries, and per-entry warnings. Unsupported ritual/item/ephemeral entries remain distinguishable from ordinary empty spell lists. Native failures in one entry do not erase good entries.
 
 Spell option `rank` is the native computed cast rank. `groupNumber` identifies the native slot group; prepared cantrips use group 0 even when their rank is automatically heightened. `slotId` preserves the original prepared position, including gaps; flexible non-cantrip and spontaneous options use a rank pool with null slot ID. Native signature and virtual-heightening choices are reported rather than inferred from the spell's base rank. Availability is a read-time resource fact, not permission to bypass later explicit caster/turn/review checks.
 
 Resource inspection returns fixed focus/hero-point summaries and paginated resource `entries`. Missing or incomplete values remain null/unavailable; zero remains zero. Prepared rows report `readyCount` for owned, unexpended prepared selections, distinct from empty capacity, plus bounded slot details with `slotsTotal`/`slotsTruncated`. Item use/frequency facts do not activate items or infer recovery rules. Resource rows are capped at 500 with an explicit `truncated` marker; warnings and entry summaries are bounded too. These reads do not spend resources, post chat, prepare spells, advance time, or change controlled/targeted tokens.
+
+## PF2e spell resolution (v0.11)
+
+The four spell-resolution tools extend discovery to 60 tools. They resolve a native attack, one saving throw, or base damage from a single confirmed spell-cast card. Start with `pf2e_inspect_spell_resolution`, supplying the exact cast card UUID, its confirmed caster token, one explicit target token, an action, and the desired chat visibility. If the cast recorded targets, choose one of those; an empty cast-target list allows an explicit target choice in this preview. The preview returns a short-lived `resolutionId`, `reviewToken`, and nullable `expectedCombat` snapshot. For attacks, select `attackNumber` 1–3; saves and damage use 1.
+
+Call the matching `pf2e_roll_spell_attack`, `pf2e_roll_spell_save`, or `pf2e_roll_spell_damage` with the same selection and all three preview values. Writes require GM approval by default. PF2e chooses the native statistics and posts the chat card. Caster and target tokens must resolve unambiguously in the current canvas scene; in a started encounter on that scene, the caster must be the current combatant.
+
+The persistent GM-restricted `spellResolutions` ledger records visibility mode and Actor/token identities. A reserved, confirmed, or uncertain operation blocks the same cast/action/target/attack number across new previews and reloads. Do not clear records to bypass a blocked operation or retry an uncertain roll; inspect the native chat and ledger first. The tools do not spend slots, focus, actions, or item uses and do not apply HP, save/critical scaling, effects, templates, durations, or time advancement. For damage spells without an attack roll, the result is target-independent base damage even though the preview still binds a target for later review. See the [spell-resolution operator guide](spell-resolution.md) and [v0.11 validation](validation-v0.11.0.md); matching-build live acceptance remains required.
 
 ## Boundaries
 

@@ -24,7 +24,7 @@ The slot write is intentionally not performed through arbitrary fields or direct
 
 ## Scope and artifacts
 
-The run created one named scene, six named NPCs, six regular spellcasting entries, six spells, and six scene tokens. No previous acceptance fixture, campaign document, encounter, damage/spell ledger, or existing Actor was changed. Five native messages and their audit records remain in the world. No cleanup deletion was performed. No automated failure interruption was induced against a live audit reservation.
+The run created one named scene, six named NPCs, six regular spellcasting entries, six spells, and six scene tokens. No previous acceptance fixture, campaign document, encounter or existing Actor was changed. Existing damage/spell audit records were not changed or cleared; new native cast audit records were appended. Five native messages and their audit records remain in the world. No cleanup deletion was performed. No automated failure interruption was induced against a live audit reservation.
 
 The resumable harness is [live-v091-spellcasting.mjs](../scripts/live-v091-spellcasting.mjs). It keeps UUIDs and per-operation checkpoints in a mode-0600 file under `/tmp`, not in the checked-in report. Fixture mode requires an explicit environment opt-in and checks saved world/version and fixture ownership before continuing.
 
@@ -49,3 +49,8 @@ Main-agent `FOUNDRY_MCP_REQUIRE_POWERSHELL=1 FOUNDRY_MCP_PWSH_PATH=/tmp/foundry-
 
 
 Publication: [v0.9.1](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.9.1) was published as latest stable after `verify-local`, public `preflight`, draft identity/size/hash verification and `verify-published` all passed. Assets remain immutable in `dist/releases/v0.9.1/`. Prepared live casting remains pending; no existing fixture or ledger was cleared. This source milestone is pushed before starting v0.10.
+
+
+## Subsequent native prepared-fixture check
+
+A supported native PF2e compendium import supplied a new prepared caster without changing the generic sanitizer or requiring manual preparation. Prepared inspection, preview, one native cast, slot false-to-true expenditure, card provenance and exact duplicate rejection passed; see [prepared live report](live-prepared-v0.9.1.md). This closes the resource-path coverage gap on the installed implementation, but not the matching-release deployment gate: module/daemon were 0.9.0 and client/server 0.10.0 during that later run. The new imported fixture and audit record remain intact.
