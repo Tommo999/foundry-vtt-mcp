@@ -8,7 +8,7 @@ Status recorded 2026-11-16. Releases follow acceptance gates rather than promise
 | --- | --- | --- | --- |
 | v0.11 | Native spell resolution | Published; matching-build live acceptance pending | Resolve a confirmed cast with native spell attacks, saves and base damage. |
 | v0.12 | Spell history and evidence-bound recovery | Published; assets anonymously verified; matching-build live acceptance pending | Inspect what happened after an interrupted operation and reconcile supported outcomes without replaying gameplay. |
-| v0.13 | Reviewed spell effects and duration visibility | Implementation validated; matching-build live acceptance pending; see validation record for publication status | Apply an explicitly selected native effect or condition from a confirmed cast, then inspect duration and sustain reminders. |
+| v0.13 | Reviewed spell effects and duration visibility | Published; assets anonymously verified; matching-build live acceptance pending | Apply an explicitly selected native effect or condition from a confirmed cast, then inspect duration and sustain reminders. |
 | v0.14 | Consumables and item spellcasting | Planned; native API investigation required | Use supported potions, scrolls, wands and other eligible items with explicit previews and native resource consumption. |
 | v0.15 | Rest, recovery and session readiness | Planned; native API investigation required | Review supported party recovery workflows and see what still needs GM attention before the next encounter or session. |
 
@@ -56,7 +56,7 @@ Example: “Preview applying this selected spell effect to the fighter, approve 
 
 Do not infer effects from spell text or degree of success. Do not spend spell resources again, lower/remove conditions through this application workflow, apply HP, extend durations or advance time. A sustain reminder does not claim an action was spent.
 
-The v0.13 implementation follows these boundaries and has source-shaped coverage. Local validation, package verification, publication status and matching-build live acceptance are recorded in [v0.13 validation](validation-v0.13.0.md). The [settled design](v0.13-native-spell-effects-design.md) defines the detailed contract.
+The v0.13 implementation follows these boundaries and has source-shaped coverage. The [public v0.13.0 release](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.13.0) is published, and its assets were verified anonymously. Local validation and the matching-build live acceptance status are recorded in [v0.13 validation](validation-v0.13.0.md). The [settled design](v0.13-native-spell-effects-design.md) defines the detailed contract.
 
 ## v0.14 — consumables and item spellcasting
 

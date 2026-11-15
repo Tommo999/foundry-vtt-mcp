@@ -1,6 +1,6 @@
-# v0.13.0 candidate validation
+# v0.13.0 validation
 
-This is a local development candidate, not a published release. Matching-build live Foundry/PF2e acceptance is pending.
+The v0.13.0 release is published and anonymously verified. Matching-build live Foundry/PF2e acceptance remains pending.
 
 ## Local source checks
 
@@ -26,9 +26,13 @@ The release check used `RELEASE_REPOSITORY=Tommo999/foundry-vtt-mcp-releases REL
 
 Source-shaped PF2e fixtures validate native API call shapes and stale-evidence handling, but they do not establish live PF2e/Foundry compatibility. A GM must verify matching module and companion versions, effect creation and native grants, condition create/increase/no-op behavior, audit recovery, and duration inspection in an isolated live world before accepting the release.
 
-## Candidate assets
+## Published assets and verification
 
-The verified candidate is in `dist/releases/v0.13.0`. The build and packaging inputs do not embed a Git SHA; these assets were built from the reviewed working tree based on `d5f6bc04c58484710ccdbf19066ff50724ed5da1`. Record the resulting source commit after commit; preserve and verify these candidate bytes without rebuilding. Hosted CI, public publication, anonymous public download verification and live-world acceptance are pending.
+Source commit: `f2d7c41b24d51af3b19ffd6d47cd495c3f9dcd9c`. Hosted CI run [43729739433](https://github.com/Tommo999/foundry-vtt-mcp/actions/runs/43729739433) passed both the Linux Node tests/typecheck/build job and Windows PowerShell/setup archive job. The exact four draft assets were downloaded and matched by name, size and SHA-256 to the local candidate before publication.
+
+The [public v0.13.0 release](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.13.0) is published and marked latest. `verify-published` passed anonymous downloads for all release assets. An independent anonymous fetch also confirmed that the stable `latest/download/module.json` bytes exactly match the local v0.13.0 manifest, its ZIP URL is pinned to `v0.13.0/foundry-vtt-mcp.zip`, the downloaded ZIP bytes match the candidate, and the public latest-release API reports stable tag `v0.13.0`.
+
+The release files are preserved byte-for-byte in `dist/releases/v0.13.0`; no rebuild was performed after publication. Matching-build live Foundry/PF2e acceptance and live-world workflow checks remain pending. No live-world writes were performed.
 
 | Asset | SHA-256 |
 | --- | --- |
