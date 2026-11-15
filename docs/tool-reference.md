@@ -60,6 +60,9 @@ The PF2e tools are also listed for MCP clients in every game system. They requir
 | `pf2e_roll_spell_attack`          | Roll the exact previewed native spell attack with explicit target and selected MAP.                                                              |
 | `pf2e_roll_spell_save`            | Roll one target's native save against the current spell DC from the confirmed cast.                                                              |
 | `pf2e_roll_spell_damage`          | Roll native base damage for the exact cast without scaling or applying HP.                                                                       |
+| `pf2e_inspect_spell_history`      | Read bounded cast and resolution history with separate original/effective status filters and primitive evidence references.                      |
+| `pf2e_inspect_spell_reconciliation` | Preview strict native evidence for one unresolved cast or resolution record; performs no write or replay.                                       |
+| `pf2e_reconcile_spell_audit`      | Append one approved confirmed-observed or refused-unchanged reconciliation without changing the original record.                                |
 | `pf2e_inspect_resources`          | Inspect native focus/hero points and bounded spell-slot, innate-use and owned-item resource facts without spending them.                         |
 | `pf2e_add_inventory_item`         | Add a PF2e compendium physical item, including ammunition, with a positive quantity.                                                             |
 | `pf2e_set_item_quantity`          | Set an existing inventory item's quantity.                                                                                                       |
@@ -203,6 +206,12 @@ The four spell-resolution tools extend discovery to 60 tools. They resolve a nat
 Call the matching `pf2e_roll_spell_attack`, `pf2e_roll_spell_save`, or `pf2e_roll_spell_damage` with the same selection and all three preview values. Writes require GM approval by default. PF2e chooses the native statistics and posts the chat card. Caster and target tokens must resolve unambiguously in the current canvas scene; in a started encounter on that scene, the caster must be the current combatant.
 
 The persistent GM-restricted `spellResolutions` ledger records visibility mode and Actor/token identities. A reserved, confirmed, or uncertain operation blocks the same cast/action/target/attack number across new previews and reloads. Do not clear records to bypass a blocked operation or retry an uncertain roll; inspect the native chat and ledger first. The tools do not spend slots, focus, actions, or item uses and do not apply HP, save/critical scaling, effects, templates, durations, or time advancement. For damage spells without an attack roll, the result is target-independent base damage even though the preview still binds a target for later review. See the [spell-resolution operator guide](spell-resolution.md) and [v0.11 validation](validation-v0.11.0.md); matching-build live acceptance remains required.
+
+## PF2e spell history and reconciliation (v0.12)
+
+The three history/reconciliation tools bring discovery to 63 tools. `pf2e_inspect_spell_history` pages through at most 50 entries and can filter by Actor, ledger kind, original status, and effective status. It returns original and effective states, reconciliation decision, bounded resource/roll facts, and message UUIDs without exposing session IDs, review tokens, or full Actor/chat sources.
+
+For a reserved or uncertain source, call `pf2e_inspect_spell_reconciliation` with its exact kind and ID. It reports missing or contradictory facts, or returns a short-lived evidence-bound review. `pf2e_reconcile_spell_audit` requires that exact review. It uses the normal GM approval flow by default and the current session's automatic-write permission only when enabled. Reconciliation appends to a separate GM-restricted audit setting, leaves cast/resolution source records untouched, and never repeats native gameplay. Original cast IDs and resolution operation keys remain blocked. See the [spell history and recovery guide](spell-history-recovery.md) and [v0.12 release notes](release-v0.12.0.md); matching-build live acceptance is pending until verified in Foundry.
 
 ## Boundaries
 

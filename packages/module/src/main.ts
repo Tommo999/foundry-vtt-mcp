@@ -11,6 +11,7 @@ import { handlePF2eChecks } from "./pf2e-checks";
 import { handlePF2eSpellcasting } from "./pf2e-spellcasting";
 import { handlePF2eSpellCast } from "./pf2e-spell-cast";
 import { handlePF2eSpellResolution } from "./pf2e-spell-resolution";
+import { handlePF2eSpellAudit } from "./pf2e-spell-audit";
 import { handlePF2eStrikes } from "./pf2e-strikes";
 import { handlePF2eCombatContext } from "./pf2e-combat-context";
 import { handlePF2eInspectDamageApplication } from "./pf2e-damage-context";
@@ -46,6 +47,7 @@ type Pending = {
   timer: number;
   socket: WebSocket;
   identity: BridgeIdentity;
+  localCompletion?: (result: ToolResult) => void;
 };
 type Runtime = {
   socket?: WebSocket;
@@ -59,6 +61,12 @@ type Runtime = {
   queue: Map<string, Pending>;
   seen: Set<string>;
   history: Array<{ id: string; tool: string; outcome: string; at: string }>;
+  spellHistoryEntries: any[];
+  spellAuditPreviews: Map<string, any>;
+  spellAuditExpanded: Set<string>;
+  spellAuditSessionKey?: string;
+  spellAuditError?: string;
+  spellAuditBusy: boolean;
   app?: BridgeApp;
 };
 const runtime: Runtime = {
@@ -68,6 +76,10 @@ const runtime: Runtime = {
   queue: new Map(),
   seen: new Set(),
   history: [],
+  spellHistoryEntries: [],
+  spellAuditPreviews: new Map(),
+  spellAuditExpanded: new Set(),
+  spellAuditBusy: false,
 };
 const g = globalThis as any;
 const gameRef = () => g.game;
@@ -540,6 +552,16 @@ async function execute(
       case "pf2e_roll_spell_save":
       case "pf2e_roll_spell_damage": {
         const data = await handlePF2eSpellResolution(
+          tool,
+          args,
+          pf2eContext(session, socket!, authorization),
+        );
+        return { ok: true, data };
+      }
+      case "pf2e_inspect_spell_history":
+      case "pf2e_inspect_spell_reconciliation":
+      case "pf2e_reconcile_spell_audit": {
+        const data = await handlePF2eSpellAudit(
           tool,
           args,
           pf2eContext(session, socket!, authorization),
@@ -1266,6 +1288,136 @@ function respond(
   respondRaw(id, result, socket);
   recordOutcome(id, tool, result.ok ? "success" : result.error.code);
 }
+function clearSpellAuditState() {
+  runtime.spellHistoryEntries = [];
+  runtime.spellAuditPreviews.clear();
+  runtime.spellAuditExpanded.clear();
+  runtime.spellAuditSessionKey = undefined;
+  runtime.spellAuditError = undefined;
+  runtime.spellAuditBusy = false;
+}
+function currentSpellAuditSessionKey(): string | undefined {
+  if (!runtime.sessionId || !runtime.socket || runtime.socket.readyState !== WebSocket.OPEN || !gm()) return undefined;
+  const current = identity();
+  return `${runtime.sessionId}\0${current.worldId}\0${current.userId}`;
+}
+function ensureSpellAuditSession(): boolean {
+  const key = currentSpellAuditSessionKey();
+  if (!key) {
+    clearSpellAuditState();
+    return false;
+  }
+  if (runtime.spellAuditSessionKey && runtime.spellAuditSessionKey !== key) clearSpellAuditState();
+  runtime.spellAuditSessionKey = key;
+  return true;
+}
+function spellAuditSessionStillCurrent(key: string | undefined): boolean {
+  if (!key || currentSpellAuditSessionKey() !== key) {
+    clearSpellAuditState();
+    return false;
+  }
+  return true;
+}
+function completePending(id: string, pending: Pending, result: ToolResult) {
+  if (pending.localCompletion) {
+    pending.localCompletion(result);
+    runtime.app?.render(true);
+  } else respond(id, result, pending.socket, pending.request.tool);
+}
+function submitLocalTool(tool: ToolName, args: Record<string, unknown>, completion: (result: ToolResult) => void) {
+  const socket = runtime.socket;
+  const before = identity();
+  if (!socket || !ensureSpellAuditSession() || !validSession(before, socket)) {
+    completion(failure("SESSION_CHANGED", "Pair a current GM session before using spell audit."));
+    return;
+  }
+  let parsed: ReturnType<typeof parseTool>;
+  try { parsed = parseTool(tool, args); }
+  catch (error: any) { completion(failure("INVALID_INPUT", error?.message ?? "Invalid spell audit request.")); return; }
+  const id = `spell-audit-ui-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const sessionKey = runtime.spellAuditSessionKey;
+  const localSocket = socket;
+  const finishLocal = (result: ToolResult) => {
+    if (runtime.socket !== localSocket || !spellAuditSessionStillCurrent(sessionKey)) {
+      clearSpellAuditState();
+      return;
+    }
+    recordOutcome(id, parsed.tool, result.ok ? "success" : result.error.code);
+    completion(result);
+  };
+  const request: BridgeRequest = { type: "request", id, tool: parsed.tool, args: parsed.args };
+  if (writeTools.has(parsed.tool) && !runtime.autoWrites) {
+    const timer = window.setTimeout(() => {
+      const pending = runtime.queue.get(id);
+      if (!pending) return;
+      runtime.queue.delete(id);
+      completePending(id, pending, failure("APPROVAL_EXPIRED", "Approval expired after five minutes."));
+    }, APPROVAL_TIMEOUT_MS);
+    runtime.queue.set(id, { request, timer, socket, identity: before, localCompletion: finishLocal });
+    runtime.app?.render(true);
+    return;
+  }
+  void execute(parsed.tool, parsed.args, before, socket, runtime.autoWrites ? "automatic" : "approved")
+    .then(finishLocal)
+    .catch((error: any) => finishLocal(failure(error?.code ?? "OPERATION_FAILED", error?.message ?? String(error))));
+}
+function refreshSpellHistory() {
+  if (!ensureSpellAuditSession()) {
+    runtime.spellAuditError = "Connect and pair as the current GM to inspect spell history.";
+    runtime.app?.render(true);
+    return;
+  }
+  runtime.spellAuditBusy = true;
+  runtime.spellAuditError = undefined;
+  const sessionKey = runtime.spellAuditSessionKey;
+  runtime.app?.render(true);
+  submitLocalTool("pf2e_inspect_spell_history", { offset: 0, limit: 10 }, (result) => {
+    if (!spellAuditSessionStillCurrent(sessionKey)) { runtime.app?.render(true); return; }
+    runtime.spellAuditBusy = false;
+    if (!result.ok) runtime.spellAuditError = result.error.message;
+    else runtime.spellHistoryEntries = Array.isArray((result.data as any)?.entries) ? (result.data as any).entries.slice(0, 10) : [];
+    runtime.app?.render(true);
+  });
+}
+function previewSpellReconciliation(kind: "cast" | "resolution", sourceId: string) {
+  if (!ensureSpellAuditSession()) return;
+  const key = `${kind}\0${sourceId}`;
+  runtime.spellAuditBusy = true;
+  runtime.spellAuditError = undefined;
+  const sessionKey = runtime.spellAuditSessionKey;
+  runtime.app?.render(true);
+  submitLocalTool("pf2e_inspect_spell_reconciliation", { kind, sourceId }, (result) => {
+    if (!spellAuditSessionStillCurrent(sessionKey)) { runtime.app?.render(true); return; }
+    runtime.spellAuditBusy = false;
+    if (!result.ok) runtime.spellAuditError = result.error.message;
+    else runtime.spellAuditPreviews.set(key, result.data);
+    runtime.app?.render(true);
+  });
+}
+function reconcileSpellAudit(kind: "cast" | "resolution", sourceId: string) {
+  const key = `${kind}\0${sourceId}`;
+  const preview = runtime.spellAuditPreviews.get(key);
+  if (!preview?.supported || !preview.reconciliationId || !preview.reviewToken) {
+    runtime.spellAuditError = "Refresh the reconciliation preview before proceeding.";
+    runtime.app?.render(true);
+    return;
+  }
+  runtime.spellAuditBusy = true;
+  runtime.spellAuditError = undefined;
+  const sessionKey = runtime.spellAuditSessionKey;
+  runtime.app?.render(true);
+  submitLocalTool("pf2e_reconcile_spell_audit", {
+    reconciliationId: preview.reconciliationId,
+    reviewToken: preview.reviewToken,
+  }, (result) => {
+    if (!spellAuditSessionStillCurrent(sessionKey)) { runtime.app?.render(true); return; }
+    runtime.spellAuditBusy = false;
+    if (!result.ok) runtime.spellAuditError = result.error.message;
+    else runtime.spellAuditPreviews.delete(key);
+    runtime.app?.render(true);
+    if (result.ok) refreshSpellHistory();
+  });
+}
 function respondRaw(id: string, result: ToolResult, socket = runtime.socket) {
   if (socket?.readyState === WebSocket.OPEN)
     socket.send(JSON.stringify({ type: "response", id, result }));
@@ -1319,12 +1471,7 @@ async function handleRequest(request: BridgeRequest, socket: WebSocket) {
       const pending = runtime.queue.get(request.id);
       if (pending) {
         runtime.queue.delete(request.id);
-        respond(
-          request.id,
-          failure("APPROVAL_EXPIRED", "Approval expired after five minutes."),
-          pending.socket,
-          request.tool,
-        );
+        completePending(request.id, pending, failure("APPROVAL_EXPIRED", "Approval expired after five minutes."));
         runtime.app?.render(true);
       }
     }, APPROVAL_TIMEOUT_MS);
@@ -1363,7 +1510,10 @@ function receive(raw: MessageEvent) {
   }
   if (data.type === "paired") {
     if (!validCurrentPairing(socket, runtime.socket, data)) return;
-    runtime.sessionId = String(data.sessionId ?? "");
+    const nextSessionId = String(data.sessionId ?? "");
+    if (runtime.sessionId !== nextSessionId || runtime.worldId !== identity().worldId || runtime.userId !== identity().userId)
+      clearSpellAuditState();
+    runtime.sessionId = nextSessionId;
     runtime.runningCompanionVersion = data.runningCompanionVersion;
     runtime.worldId = identity().worldId;
     runtime.userId = identity().userId;
@@ -1406,6 +1556,7 @@ function connect() {
   runtime.queue.clear();
   runtime.seen.clear();
   runtime.sessionId = undefined;
+  clearSpellAuditState();
   runtime.worldId = identity().worldId;
   runtime.userId = identity().userId;
   socket.addEventListener("open", () => {
@@ -1426,16 +1577,11 @@ function connect() {
       runtime.autoWrites = false;
       for (const [id, p] of runtime.queue) {
         clearTimeout(p.timer);
-        respond(
-          id,
-          failure(
-            "DISCONNECTED",
-            "Request cancelled because the bridge disconnected.",
-          ),
-        );
+        completePending(id, p, failure("DISCONNECTED", "Request cancelled because the bridge disconnected."));
       }
       runtime.queue.clear();
       runtime.sessionId = undefined;
+      clearSpellAuditState();
       runtime.runningCompanionVersion = undefined;
       runtime.worldId = undefined;
       runtime.userId = undefined;
@@ -1457,19 +1603,14 @@ function disconnect(show = true) {
   }
   runtime.autoWrites = false;
   runtime.sessionId = undefined;
+  clearSpellAuditState();
   runtime.runningCompanionVersion = undefined;
   runtime.worldId = undefined;
   runtime.userId = undefined;
   for (const [id, p] of runtime.queue) {
     clearTimeout(p.timer);
-    if (show)
-      respond(
-        id,
-        failure(
-          "DISCONNECTED",
-          "Request cancelled because the bridge disconnected.",
-        ),
-      );
+    if (show || p.localCompletion)
+      completePending(id, p, failure("DISCONNECTED", "Request cancelled because the bridge disconnected."));
   }
   runtime.queue.clear();
   if (show) runtime.app?.render(true);
@@ -1489,6 +1630,7 @@ class BridgeApp extends ApplicationV2 {
   _renderHTML(): HTMLElement {
     const root = document.createElement("section");
     root.className = "fvtt-mcp";
+    const auditReady = ensureSpellAuditSession();
     const status =
       runtime.socket?.readyState === WebSocket.OPEN
         ? "Connected"
@@ -1511,7 +1653,7 @@ class BridgeApp extends ApplicationV2 {
     const guidance = diagnostics.upgradeGuidance.steps.length
       ? `<aside class="upgrade-notice"><strong>Version update recommended or unverified</strong><ol>${diagnostics.upgradeGuidance.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></aside>`
       : "";
-    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><h3>Runtime versions</h3><ul>${versions}</ul>${guidance}<label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
+    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><h3>Runtime versions</h3><ul>${versions}</ul>${guidance}<label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><section class="spell-audit"><h3>Spell audit</h3><p class="hint">Read-only history and evidence preview. Reconciliation uses the same write approval settings as MCP tools.</p><div class="actions"><button data-action="spell-refresh" ${!auditReady || runtime.spellAuditBusy ? "disabled" : ""}>${runtime.spellAuditBusy ? "Working…" : "Refresh (10)"}</button></div><p class="spell-audit-status">${escapeHtml(runtime.spellAuditError ?? (auditReady ? "" : "Connect and pair as the current GM to inspect spell history."))}</p><div class="spell-audit-rows"></div></section><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
     const list = root.querySelector(".requests")!;
     for (const [id, pending] of runtime.queue) {
       const card = document.createElement("article");
@@ -1525,6 +1667,7 @@ class BridgeApp extends ApplicationV2 {
         const encoded = String(pending.request.args.dataBase64 ?? "");
         approvalArgs.byteSize = Math.floor((encoded.length * 3) / 4);
       }
+      if (pending.request.tool === "pf2e_reconcile_spell_audit") delete approvalArgs.reviewToken;
       detail.textContent = JSON.stringify(approvalArgs, null, 2);
       const approve = document.createElement("button");
       approve.textContent = "Approve";
@@ -1540,6 +1683,89 @@ class BridgeApp extends ApplicationV2 {
       const row = document.createElement("li");
       row.textContent = `${item.at} · ${item.tool} · ${item.outcome}`;
       history.append(row);
+    }
+    const auditRows = root.querySelector(".spell-audit-rows")!;
+    for (const rowData of runtime.spellHistoryEntries.slice(0, 10)) {
+      const key = `${rowData.kind}\0${rowData.id}`;
+      const row = document.createElement("article");
+      row.className = "spell-audit-row";
+      const title = document.createElement("strong");
+      title.textContent = `${rowData.kind} · ${rowData.id}`;
+      const statusText = document.createElement("p");
+      statusText.textContent = `Original: ${rowData.originalStatus} · Effective: ${rowData.effectiveStatus}`;
+      const controls = document.createElement("div");
+      controls.className = "actions";
+      const details = document.createElement("button");
+      details.textContent = runtime.spellAuditExpanded.has(key) ? "Hide details" : "Details";
+      details.dataset.auditDetails = "true";
+      details.dataset.auditKind = rowData.kind;
+      details.dataset.auditSourceId = rowData.id;
+      controls.append(details);
+      const unresolved = rowData.originalStatus === "reserved" || rowData.originalStatus === "uncertain";
+      if (unresolved) {
+        const preview = document.createElement("button");
+        preview.textContent = "Preview reconciliation";
+        preview.dataset.auditPreview = "true";
+        preview.dataset.auditKind = rowData.kind;
+        preview.dataset.auditSourceId = rowData.id;
+        preview.disabled = runtime.spellAuditBusy || !auditReady;
+        controls.append(preview);
+      }
+      row.append(title, statusText, controls);
+      if (runtime.spellAuditExpanded.has(key)) {
+        const detailsList = document.createElement("dl");
+        const detailsRows: Array<[string, unknown]> = [
+          ["Actor", rowData.actorUuid], ["Spell", rowData.spellUuid], ["Targets", rowData.targetTokenUuids],
+          ["Reconciliation", rowData.reconciliationId], ["Decision", rowData.reconciliationDecision],
+          ["Evidence message", rowData.evidenceMessageUuid ?? rowData.messageUuid ?? rowData.chatMessageUuid],
+          ["Evidence resources", { before: rowData.evidenceResourceBefore, after: rowData.evidenceResourceAfter }],
+          ["Evidence roll", { type: rowData.evidenceRollType, total: rowData.evidenceRollTotal }],
+        ];
+        for (const [label, value] of detailsRows) {
+          if (value == null) continue;
+          const term = document.createElement("dt"); term.textContent = label;
+          const desc = document.createElement("dd"); desc.textContent = typeof value === "string" ? value : JSON.stringify(value);
+          detailsList.append(term, desc);
+        }
+        row.append(detailsList);
+        const evidenceUuid = rowData.evidenceMessageUuid ?? rowData.messageUuid ?? rowData.chatMessageUuid;
+        if (typeof evidenceUuid === "string") {
+          const openEvidence = document.createElement("button");
+          openEvidence.textContent = "Open evidence message";
+          openEvidence.dataset.auditEvidenceUuid = evidenceUuid;
+          row.append(openEvidence);
+        }
+      }
+      const previewData = runtime.spellAuditPreviews.get(key);
+      if (previewData) {
+        const previewBlock = document.createElement("div");
+        previewBlock.className = "spell-audit-preview";
+        const summary = document.createElement("p");
+        summary.textContent = previewData.supported
+          ? `Decision: ${previewData.decision} · Evidence: ${previewData.evidenceMessageUuid ?? "native resource facts"} · Expires: ${previewData.expiresAt ?? "after this preview"}`
+          : `No reconciliation available: ${(previewData.reasons ?? []).join(" ")}`;
+        previewBlock.append(summary);
+        if (typeof previewData.evidenceMessageUuid === "string") {
+          const openEvidence = document.createElement("button");
+          openEvidence.textContent = "Open evidence message";
+          openEvidence.dataset.auditEvidenceUuid = previewData.evidenceMessageUuid;
+          previewBlock.append(openEvidence);
+        }
+        if (previewData.supported) {
+          const evidence = document.createElement("pre");
+          evidence.textContent = JSON.stringify({ resourceBefore: previewData.resourceBefore, resourceAfter: previewData.resourceAfter, rollType: previewData.rollType, rollTotal: previewData.rollTotal }, null, 2);
+          previewBlock.append(evidence);
+          const reconcile = document.createElement("button");
+          reconcile.textContent = "Reconcile audit";
+          reconcile.dataset.auditReconcile = "true";
+          reconcile.dataset.auditKind = rowData.kind;
+          reconcile.dataset.auditSourceId = rowData.id;
+          reconcile.disabled = runtime.spellAuditBusy || !auditReady;
+          previewBlock.append(reconcile);
+        }
+        row.append(previewBlock);
+      }
+      auditRows.append(row);
     }
     root.addEventListener("input", (e) => {
       const target = e.target as HTMLInputElement;
@@ -1564,6 +1790,30 @@ class BridgeApp extends ApplicationV2 {
         connect();
       }
       if (button.dataset.action === "disconnect") disconnect();
+      if (button.dataset.action === "spell-refresh") refreshSpellHistory();
+      if (button.dataset.auditDetails) {
+        const key = `${button.dataset.auditKind}\0${button.dataset.auditSourceId}`;
+        if (runtime.spellAuditExpanded.has(key)) runtime.spellAuditExpanded.delete(key);
+        else runtime.spellAuditExpanded.add(key);
+        this.render(true);
+      }
+      if (button.dataset.auditPreview) {
+        const kind = button.dataset.auditKind, sourceId = button.dataset.auditSourceId;
+        if ((kind === "cast" || kind === "resolution") && sourceId) previewSpellReconciliation(kind, sourceId);
+      }
+      if (button.dataset.auditReconcile) {
+        const kind = button.dataset.auditKind, sourceId = button.dataset.auditSourceId;
+        if ((kind === "cast" || kind === "resolution") && sourceId) reconcileSpellAudit(kind, sourceId);
+      }
+      if (button.dataset.auditEvidenceUuid) {
+        const uuid = button.dataset.auditEvidenceUuid;
+        void Promise.resolve(g.fromUuid?.(uuid)).then((message: any) => {
+          if (!message) { notify("That evidence message is no longer available in this world.", "warn"); return; }
+          const chat = g.ui?.chat;
+          if (typeof chat?.scrollToMessage === "function") chat.scrollToMessage(message.id);
+          else notify(`Evidence message: ${uuid}`, "info");
+        }).catch(() => notify("That evidence message is no longer available in this world.", "warn"));
+      }
       if (button.dataset.approve) void this.approve(button.dataset.approve);
       if (button.dataset.deny) this.deny(button.dataset.deny);
     });
@@ -1580,13 +1830,8 @@ class BridgeApp extends ApplicationV2 {
     this.render(true);
     const before = pending.identity;
     if (!validSession(before, pending.socket)) {
-      respond(
-        id,
-        failure(
-          "SESSION_CHANGED",
-          "GM, world or bridge changed before approval.",
-        ),
-      );
+      clearSpellAuditState();
+      completePending(id, pending, failure("SESSION_CHANGED", "GM, world or bridge changed before approval."));
       return;
     }
     const result = await execute(
@@ -1596,14 +1841,14 @@ class BridgeApp extends ApplicationV2 {
       pending.socket,
       "approved",
     );
-    respond(id, result, pending.socket, pending.request.tool);
+    completePending(id, pending, result);
   }
   deny(id: string) {
     const pending = runtime.queue.get(id);
     if (!pending) return;
     clearTimeout(pending.timer);
     runtime.queue.delete(id);
-    respond(id, failure("DENIED", "GM denied this write."));
+    completePending(id, pending, failure("DENIED", "GM denied this write."));
     this.render(true);
   }
 }
@@ -1684,6 +1929,14 @@ g.Hooks.once("ready", () => {
     default: { version: 1, entries: {} },
     restricted: true,
   });
+  gameRef().settings.register(MODULE_ID, "spellReconciliations", {
+    name: "Spell reconciliation evidence",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { version: 1, entries: {} },
+    restricted: true,
+  });
   gameRef().settings.registerMenu(MODULE_ID, "openBridge", {
     name: "Open MCP Bridge",
     label: "Open Bridge",
@@ -1708,5 +1961,9 @@ export const __test = {
   searchableText,
   handleRequest,
   disconnect,
+  submitLocalTool,
+  refreshSpellHistory,
+  previewSpellReconciliation,
+  reconcileSpellAudit,
   BridgeApp,
 };

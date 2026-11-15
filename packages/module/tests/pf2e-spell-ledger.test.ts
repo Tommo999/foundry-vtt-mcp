@@ -49,7 +49,9 @@ function reservation(overrides: Partial<SpellCastReservation> = {}) {
 function makeContext(initial: unknown = undefined) {
   let stored: unknown = initial;
   let authorized = true;
-  const get = vi.fn(() => stored);
+  const get = vi.fn((_module: string, key: string) =>
+    key === "spellCasts" ? stored : undefined,
+  );
   const set = vi.fn(async (_module: string, _key: string, value: unknown) => {
     stored = value;
     return value;

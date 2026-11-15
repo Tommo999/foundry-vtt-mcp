@@ -1169,36 +1169,34 @@ async function executeResolution(
   ctx.assertWrite();
   intent.used = true;
   const preview = await resolveFresh(intent, ctx);
+  recheckIntent(intent, ctx);
+  assertResolvedCurrent(preview, intent, ctx);
+  ctx.assertWrite();
+  const reservation: SpellResolutionReservation = {
+    resolutionId,
+    operationKey: intent.operationKey,
+    sessionId: intent.sessionId,
+    castId: preview.castRecord.castId,
+    castMessageUuid: selection.castMessageUuid,
+    action,
+    messageMode: selection.messageMode,
+    casterActorUuid: preview.actor.uuid,
+    targetActorUuid: preview.targetActor.uuid,
+    casterTokenUuid: preview.token.uuid,
+    targetTokenUuid: preview.targetToken.uuid,
+    attackNumber: action === "attack" ? selection.attackNumber : null,
+    reviewToken: intent.reviewToken,
+    fingerprint: intent.fingerprint,
+  };
+  await reserveSpellResolution(ctx, reservation);
   const run = async () => {
-    let reserved = false,
-      terminalAttempted = false,
-      message: any = null,
+    let message: any = null,
       callbackMessage: any = null,
       nativeOutcome: any = null,
       roll: any = null,
       hookHandle: ReturnType<typeof hookMessage> | null = null;
     try {
       let current = await resolveFresh(intent, ctx);
-      ctx.assertWrite();
-      const reservation: SpellResolutionReservation = {
-        resolutionId,
-        operationKey: intent.operationKey,
-        sessionId: intent.sessionId,
-        castId: current.castRecord.castId,
-        castMessageUuid: selection.castMessageUuid,
-        action,
-        messageMode: selection.messageMode,
-        casterActorUuid: current.actor.uuid,
-        targetActorUuid: current.targetActor.uuid,
-        casterTokenUuid: current.token.uuid,
-        targetTokenUuid: current.targetToken.uuid,
-        attackNumber: action === "attack" ? selection.attackNumber : null,
-        reviewToken: intent.reviewToken,
-        fingerprint: intent.fingerprint,
-      };
-      await reserveSpellResolution(ctx, reservation);
-      reserved = true;
-      current = await resolveFresh(intent, ctx);
       ctx.assertWrite();
       hookHandle = hookMessage(ctx, intent, current, (candidate: any) => {
         message = candidate;
@@ -1284,8 +1282,6 @@ async function executeResolution(
       );
       recheckIntent(intent, ctx);
       ctx.assertWrite();
-      terminalAttempted = true;
-      await finalizeSpellResolution(ctx, resolutionId, "confirmed", outcome);
       const degreeOfSuccess =
         action === "damage"
           ? null
@@ -1305,6 +1301,7 @@ async function executeResolution(
                 ]
               : null;
       return {
+        __auditOutcome: outcome,
         resolution: "confirmed",
         resolutionId,
         action,
@@ -1324,91 +1321,20 @@ async function executeResolution(
       };
     } catch (cause) {
       hookHandle?.remove();
-      if (reserved && !terminalAttempted) {
-        terminalAttempted = true;
-        try {
-          const observed = await finalizeSpellResolution(
-            ctx,
-            resolutionId,
-            "uncertain",
-            {
-              messageUuid: messageUuid(message),
-              rollType: roll
-                ? action === "damage"
-                  ? "damage"
-                  : "check"
-                : null,
-              rollTotal: finiteRoll(roll),
-            },
-          );
-          throw fail(
-            "PARTIAL_FAILURE",
-            "Native spell resolution may have occurred; inspect chat and spellResolutions before retrying.",
-            {
-              resolutionId,
-              messageUuid: messageUuid(message),
-              rollType: observed.rollType,
-              rollTotal: observed.rollTotal,
-              auditStatus: observed.status,
-              auditStateKnown: true,
-              causeCode: (cause as any)?.code ?? null,
-            },
-          );
-        } catch (auditError) {
-          if ((auditError as any)?.code === "PARTIAL_FAILURE") throw auditError;
-          const auditStatus = (auditError as any)?.partial?.status ?? null;
-          throw fail(
-            "PARTIAL_FAILURE",
-            auditStatus === "confirmed"
-              ? "Native roll and confirmed audit record may be committed; inspect that message and record before proceeding."
-              : "Native spell resolution may have occurred; inspect chat and spellResolutions before retrying.",
-            {
-              resolutionId,
-              messageUuid:
-                messageUuid(message) ??
-                (auditError as any)?.partial?.messageUuid ??
-                null,
-              rollType:
-                (auditError as any)?.partial?.rollType ??
-                (roll ? (action === "damage" ? "damage" : "check") : null),
-              rollTotal:
-                finiteRoll(roll) ??
-                (auditError as any)?.partial?.rollTotal ??
-                null,
-              auditStatus,
-              auditStateKnown: auditStatus !== null,
-              causeCode: (auditError as any)?.code ?? null,
-            },
-          );
-        }
-      }
-      if (reserved) {
-        const auditStatus = (cause as any)?.partial?.status ?? null;
-        throw fail(
-          "PARTIAL_FAILURE",
-          auditStatus === "confirmed"
-            ? "Native roll and confirmed audit record may be committed; inspect that message and record before proceeding."
-            : "Native spell resolution may have occurred; inspect chat and the spellResolutions audit before any retry.",
-          {
-            resolutionId,
-            messageUuid:
-              messageUuid(message) ??
-              (cause as any)?.partial?.messageUuid ??
-              null,
-            rollType:
-              (cause as any)?.partial?.rollType ??
-              (roll ? (action === "damage" ? "damage" : "check") : null),
-            rollTotal:
-              finiteRoll(roll) ?? (cause as any)?.partial?.rollTotal ?? null,
-            auditStatus,
-            auditStateKnown: auditStatus !== null,
-            causeCode: (cause as any)?.code ?? null,
-          },
-        );
-      }
-      throw cause;
+      throw fail(
+        "SPELL_RESOLUTION_NATIVE_ATTEMPT_FAILED",
+        "The native spell-resolution attempt ended without a confirmed result.",
+        {
+          resolutionId,
+          messageUuid: messageUuid(message),
+          rollType: roll ? (action === "damage" ? "damage" : "check") : null,
+          rollTotal: finiteRoll(roll),
+          causeCode: (cause as any)?.code ?? null,
+        },
+      );
     }
   };
+  let nativeResult: any;
   if (preview.expectedCombat) {
     const combat =
       ctx.game?.combats?.get?.(
@@ -1417,11 +1343,65 @@ async function executeResolution(
       values(ctx.game?.combats).find(
         (entry) => entry.uuid === preview.expectedCombat!.encounterUuid,
       );
-    if (!combat)
-      throw fail("STALE_TURN", "The previewed encounter no longer exists.");
-    return withCombatLock(combat, ctx, run);
+    try {
+      if (!combat) throw fail("STALE_TURN", "The previewed encounter no longer exists.");
+      nativeResult = await withCombatLock(combat, ctx, run);
+    } catch (cause) {
+      return finalizeResolutionUncertain(ctx, resolutionId, cause);
+    }
+  } else {
+    try {
+      nativeResult = await run();
+    } catch (cause) {
+      return finalizeResolutionUncertain(ctx, resolutionId, cause);
+    }
   }
-  return run();
+  const { __auditOutcome, ...response } = nativeResult;
+  try {
+    recheckIntent(intent, ctx);
+    await finalizeSpellResolution(ctx, resolutionId, "confirmed", __auditOutcome);
+  } catch (cause) {
+    throw fail("PARTIAL_FAILURE", "The native resolution result is known, but final audit status must be inspected before continuing.", {
+      resolutionId,
+      messageUuid: __auditOutcome?.messageUuid ?? null,
+      rollType: __auditOutcome?.rollType ?? null,
+      rollTotal: __auditOutcome?.rollTotal ?? null,
+      auditStatus: (cause as any)?.partial?.status ?? null,
+      auditStateKnown: (cause as any)?.partial?.known === true,
+      causeCode: (cause as any)?.code ?? null,
+    });
+  }
+  return response;
+}
+
+async function finalizeResolutionUncertain(
+  ctx: PF2eContext,
+  resolutionId: string,
+  cause: unknown,
+): Promise<never> {
+  const partial = (cause as any)?.partial ?? {};
+  try {
+    const observed = await finalizeSpellResolution(ctx, resolutionId, "uncertain", {
+      messageUuid: partial.messageUuid ?? null,
+      rollType: partial.rollType ?? null,
+      rollTotal: partial.rollTotal ?? null,
+    });
+    throw fail("PARTIAL_FAILURE", "Native spell resolution may have occurred; inspect chat and spellResolutions before retrying.", {
+      resolutionId, messageUuid: partial.messageUuid ?? null, rollType: observed.rollType,
+      rollTotal: observed.rollTotal, auditStatus: observed.status, auditStateKnown: true,
+      causeCode: (cause as any)?.code ?? null,
+    });
+  } catch (auditError) {
+    if ((auditError as any)?.code === "PARTIAL_FAILURE") throw auditError;
+    throw fail("PARTIAL_FAILURE", "Native spell resolution may have occurred; inspect chat and spellResolutions before retrying.", {
+      resolutionId, messageUuid: partial.messageUuid ?? (auditError as any)?.partial?.messageUuid ?? null,
+      rollType: partial.rollType ?? null,
+      rollTotal: partial.rollTotal ?? null,
+      auditStatus: (auditError as any)?.partial?.status ?? null,
+      auditStateKnown: (auditError as any)?.partial?.known === true,
+      causeCode: (auditError as any)?.code ?? (cause as any)?.code ?? null,
+    });
+  }
 }
 
 export async function handlePF2eSpellResolution(

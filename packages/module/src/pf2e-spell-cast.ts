@@ -5,6 +5,7 @@ import { withCombatLock } from "./encounters";
 import {
   readSpellCastActorSummary,
   withSpellCastLedger,
+  type SpellCastRecord,
   type SpellCastResourceSnapshot,
 } from "./pf2e-spell-ledger";
 import {
@@ -973,6 +974,7 @@ function nativeMessageSource(
   resolved: Resolved,
   intent: CastIntent,
   ctx: PF2eContext,
+  resourceAfter: SpellCastResourceSnapshot,
 ): any {
   const source =
     typeof message?.toObject === "function"
@@ -1024,6 +1026,23 @@ function nativeMessageSource(
     spellCast: {
       castId: intent.castId,
       targetTokenUuids: [...intent.selection.targetTokenUuids],
+      resourceEvidence: {
+        version: 1,
+        castId: intent.castId,
+        worldId: intent.worldId,
+        actorUuid: resolved.actor.uuid,
+        casterTokenUuid: resolved.token.uuid,
+        entryUuid: resolved.entry.uuid,
+        spellUuid: resolved.spell.uuid,
+        rank: intent.selection.rank,
+        slotId: intent.selection.slotId,
+        targetTokenUuids: [...intent.selection.targetTokenUuids],
+        messageMode: intent.selection.messageMode,
+        nativeConsumed: true,
+        resourceBefore: plainClone(intent.resourceBefore),
+        resourceAfter: plainClone(resourceAfter),
+        fingerprint: intent.fingerprint,
+      },
     },
   };
   const whisper = Array.isArray(source.whisper) ? source.whisper : [];
@@ -1070,6 +1089,10 @@ function verifyCreatedMessage(
     message.speaker?.actor !== resolved.actor.id ||
     message.speaker?.scene !== resolved.scene.id ||
     message.flags?.["foundry-vtt-mcp"]?.spellCast?.castId !== intent.castId ||
+    !sameValue(
+      message.flags?.["foundry-vtt-mcp"]?.spellCast?.resourceEvidence,
+      source.flags?.["foundry-vtt-mcp"]?.spellCast?.resourceEvidence,
+    ) ||
     !sameValue(
       message.flags?.["foundry-vtt-mcp"]?.spellCast?.targetTokenUuids,
       intent.selection.targetTokenUuids,
@@ -1273,6 +1296,7 @@ async function executeCast(args: Record<string, unknown>, ctx: PF2eContext) {
           refreshed,
           intent,
           ctx,
+          after,
         );
         const ChatMessageClass = chatMessageClass(ctx);
         if (typeof ChatMessageClass?.create !== "function")
@@ -1412,4 +1436,64 @@ export async function handlePF2eSpellCast(
   const selection = validateSelection(args);
   if (tool === "pf2e_inspect_spell_cast") return inspectCast(selection, ctx);
   return executeCast(args, ctx);
+}
+
+/** Re-resolves current native identities and resource facts for read-only audit evidence. */
+export async function inspectCurrentSpellCastResource(
+  ctx: PF2eContext,
+  record: SpellCastRecord,
+): Promise<{ actor: any; token: any; entry: any; spell: any; resource: SpellCastResourceSnapshot; recheck: () => void }> {
+  const selection: Selection = {
+    casterTokenUuid: record.casterTokenUuid,
+    entryUuid: record.entryUuid,
+    spellUuid: record.spellUuid,
+    rank: record.rank,
+    slotId: record.slotId,
+    targetTokenUuids: record.targetTokenUuids,
+    messageMode: record.messageMode,
+  };
+  const resolved = await resolveSelection(selection, ctx, true);
+  if (resolved.actor.uuid !== record.actorUuid || resolved.token.uuid !== record.casterTokenUuid)
+    throw fail("SPELL_RECONCILIATION_IDENTITY_CHANGED", "The original caster identity is no longer current.");
+  const worldId = ctx.game?.world?.id;
+  const resource = resourceAfter(resolved);
+  const targetActorRefs = resolved.targetDocs.map((target) => target.actor);
+  const recheck = () => {
+    if (ctx.game?.world?.id !== worldId || worldId !== record.worldId)
+      throw fail("WORLD_CHANGED", "The active world changed during spell evidence review.");
+    const facts: any = resolved.sourceFacts;
+    const identitiesCurrent = owns(ctx.game?.scenes, resolved.scene) &&
+      (owns(ctx.game?.actors, resolved.actor) || resolved.token.actorLink === false) &&
+      owns(resolved.scene.tokens, resolved.token) &&
+      resolved.token.parent === resolved.scene && resolved.token.actor === resolved.actor &&
+      owns(resolved.actor.items, resolved.entry) && owns(resolved.actor.items, resolved.spell) &&
+      resolved.entry.actor === resolved.actor && resolved.entry.parent === resolved.actor &&
+      resolved.entry.uuid === selection.entryUuid && resolved.entry.spells?.get?.(resolved.spell.id) === resolved.spell &&
+      resolved.spell.uuid === selection.spellUuid && resolved.spell.actor === resolved.actor &&
+      resolved.group.active?.includes(resolved.active) === true && resolved.active.spell === resolved.spell &&
+      isCurrentNativeEntry(resolved.actor, resolved.entry) &&
+      canonical(sourceOf(resolved.actor)) === canonical(facts.actor) &&
+      canonical(sourceOf(resolved.entry)) === canonical(facts.entry) &&
+      canonical(sourceOf(resolved.spell)) === canonical(facts.spell) &&
+      canonical(sourceOf(resolved.token)) === canonical(facts.casterToken.source) &&
+      facts.targets?.length === resolved.targetDocs.length;
+    if (!identitiesCurrent)
+      throw fail("SPELL_RECONCILIATION_STALE", "Caster, target, native option, or source facts changed during evidence review.");
+    for (let index = 0; index < resolved.targetDocs.length; index += 1) {
+      const target = resolved.targetDocs[index], targetFacts = facts.targets[index];
+      if (!owns(resolved.scene.tokens, target) ||
+        (target.actorLink === true && !owns(ctx.game?.actors, target.actor)) ||
+        target.actor !== targetActorRefs[index] || target.parent !== resolved.scene ||
+        values(resolved.scene.tokens).find((item) => item.uuid === selection.targetTokenUuids[index]) !== target ||
+        targetFacts?.uuid !== target.uuid || targetFacts?.actorUuid !== (target.actor?.uuid ?? null) ||
+        canonical(sourceOf(target)) !== canonical(targetFacts.source))
+        throw fail("SPELL_RECONCILIATION_STALE", "A selected target changed during evidence review.");
+    }
+    if (!sameValue(currentResource(resolved), resource))
+      throw fail("SPELL_RECONCILIATION_STALE", "The current native spell resource changed during evidence review.");
+  };
+  return {
+    actor: resolved.actor, token: resolved.token, entry: resolved.entry,
+    spell: resolved.spell, resource, recheck,
+  };
 }

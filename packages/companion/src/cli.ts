@@ -116,6 +116,12 @@ function toolDescription(name: string): string {
       "Roll the target's native Fortitude, Reflex or Will save against the confirmed caster's native spell DC for the exact previewed cast. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not apply success-scaled damage or effects; inspect chat and audit status before retrying any uncertain result.",
     pf2e_roll_spell_damage:
       "Roll native base damage for the exact previewed cast using PF2e's damage pipeline and explicit target context where the spell is an attack. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not scale by saves/critical outcomes or apply HP; inspect chat and audit status before retrying any uncertain result.",
+    pf2e_inspect_spell_history:
+      "Read bounded spell cast and resolution audit history with optional Actor, kind and original/effective status filters. Returns primitive audit facts only; does not inspect full Actor or chat sources and performs no writes.",
+    pf2e_inspect_spell_reconciliation:
+      "Inspect one reserved or uncertain spell audit record and its current native evidence. Returns missing or contradictory evidence and, only when strict predicates pass, a short-lived review for confirmed-observed or refused-unchanged reconciliation. Read-only; does not replay native actions or modify source records.",
+    pf2e_reconcile_spell_audit:
+      "Append one approved, evidence-bound spell audit reconciliation using the exact unexpired reconciliationId and reviewToken. Original cast/resolution records remain unchanged; no refund, replay, deletion or forced status is available. Inspect the ledger before any follow-up after an uncertain append.",
     pf2e_roll_initiative:
       "Roll PF2e initiative for selected encounter combatants using each actor's configured initiative statistic (including Stealth if configured). Skips combatants with existing initiative unless reroll is true. Uses native PF2e rolls and tracker updates; messageMode defaults to GM-only. Requires GM approval and must not be automatically retried.",
     start_encounter:

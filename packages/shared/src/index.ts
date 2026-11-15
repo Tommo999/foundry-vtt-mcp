@@ -156,6 +156,23 @@ export const toolSchemas = {
     .refine((value) => value.attackNumber === 1, {
       message: "Spell damage does not accept attackNumber above one.",
     }),
+  pf2e_inspect_spell_history: z.object({
+    actorUuid: z.string().min(1).max(512).optional(),
+    kind: z.enum(["cast", "resolution"]).optional(),
+    originalStatus: z.enum(["reserved", "confirmed", "uncertain"]).optional(),
+    effectiveStatus: z.enum(["reserved", "confirmed", "uncertain", "reconciled"]).optional(),
+    offset: z.number().int().min(0).default(0),
+    limit: z.number().int().min(1).max(50).default(25),
+  }).strict(),
+  pf2e_inspect_spell_reconciliation: z.object({
+    kind: z.enum(["cast", "resolution"]),
+    sourceId: z.string().min(1).max(128),
+    candidateMessageUuid: z.string().min(1).max(512).optional(),
+  }).strict(),
+  pf2e_reconcile_spell_audit: z.object({
+    reconciliationId: z.string().min(1).max(128),
+    reviewToken: z.string().min(1).max(128),
+  }).strict(),
   pf2e_roll_initiative: z.object({
     encounterUuid: z.string().min(1),
     combatantUuids: encounterUuidList,
@@ -458,6 +475,7 @@ export type ToolName = keyof typeof toolSchemas;
 export const toolNames = Object.keys(toolSchemas) as ToolName[];
 export const writeTools = new Set<ToolName>([
   "pf2e_apply_damage",
+  "pf2e_reconcile_spell_audit",
   "pf2e_cast_spell",
   "pf2e_roll_spell_attack",
   "pf2e_roll_spell_save",

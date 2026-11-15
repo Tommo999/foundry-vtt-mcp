@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handlePF2eSpellCast } from "../src/pf2e-spell-cast";
 import { withSpellCastLedger } from "../src/pf2e-spell-ledger";
+import { __spellAuditTest, handlePF2eSpellAudit } from "../src/pf2e-spell-audit";
 
 let ctx: any;
 let actor: any;
@@ -359,12 +360,16 @@ function setup(
             ? true
             : key === "spellCasts"
               ? store
+              : key === "spellReconciliations"
+                ? (ctx as any).__spellReconciliations
               : undefined,
-        set: vi.fn(async (_namespace: string, _key: string, value: unknown) => {
-          store = structuredClone(value);
+        set: vi.fn(async (_namespace: string, key: string, value: unknown) => {
+          if (key === "spellCasts") store = structuredClone(value);
+          if (key === "spellReconciliations") (ctx as any).__spellReconciliations = structuredClone(value);
           return value;
         }),
       },
+      users: new Map([["gm", { id: "gm", isGM: true }]]),
     },
     resolve: vi.fn(async (uuid: string) => docs.get(uuid) ?? null),
     assertWrite,
@@ -381,7 +386,9 @@ function setup(
         pf2e: {
           origin: {
             uuid: spell.uuid,
+            castRank: 1,
             rollOptions: ["origin:action:slug:cast-a-spell"],
+            variant: { overlays: [] },
           },
           casting: { id: entry.id },
           nativeMarker: "preserve-me",
@@ -405,6 +412,9 @@ function setup(
         content: source.content,
         whisper: source.whisper,
         blind: source.blind,
+        toObject: function () { return structuredClone({
+          speaker: this.speaker, flags: this.flags, whisper: this.whisper, blind: this.blind,
+        }); },
       };
       messages.set(created.id, created);
       return created;
@@ -456,6 +466,242 @@ afterEach(() => {
 });
 
 describe("PF2e native inspected spell casts", () => {
+  it("reconciles a proof-bearing uncertain cast, unblocks fresh intent, and keeps its original ID blocked", async () => {
+    const intent = await inspect();
+    const result: any = await cast(intent);
+    expect(result.cast).toBe("confirmed");
+    const original = structuredClone(store.entries[intent.castId]);
+    store.entries[intent.castId].status = "uncertain";
+    const uncertain = structuredClone(store.entries[intent.castId]);
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    expect(review).toMatchObject({ supported: true, decision: "confirmed-observed" });
+    await handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: review.reconciliationId, reviewToken: review.reviewToken,
+    }, ctx);
+    expect(store.entries[intent.castId]).toEqual(uncertain);
+    const overlay = (ctx as any).__spellReconciliations.entries[review.reconciliationId];
+    expect(overlay.sourceSnapshot).not.toContain("sessionId");
+    expect(overlay.sourceSnapshot).not.toContain("reviewToken");
+    const history: any = await handlePF2eSpellAudit("pf2e_inspect_spell_history", {
+      actorUuid: actor.uuid, originalStatus: "uncertain", effectiveStatus: "reconciled", offset: 0, limit: 1,
+    }, ctx);
+    expect(history).toMatchObject({ total: 1, truncated: false });
+    expect(history.entries[0]).toMatchObject({
+      kind: "cast", originalStatus: "uncertain", effectiveStatus: "reconciled",
+      reconciliationDecision: "confirmed-observed", evidenceMessageUuid: result.chatMessageUuid,
+      evidenceResourceBefore: original.resourceBefore, evidenceResourceAfter: original.resourceAfter,
+    });
+    expect(JSON.stringify(history)).not.toContain("session-current");
+    expect(JSON.stringify(history)).not.toContain("review-");
+
+    await expect(withSpellCastLedger(ctx, (ledger) => ledger.reserve({
+      castId: "fresh-after-reconciliation", sessionId: "session-current", actorUuid: actor.uuid,
+      casterTokenUuid: token.uuid, entryUuid: entry.uuid, spellUuid: spell.uuid, rank: 1,
+      slotId: 0, targetTokenUuids: [targetToken.uuid], messageMode: "gm", reviewToken: "new-review",
+      fingerprint: "b".repeat(64), resourceBefore: original.resourceBefore,
+    }))).resolves.toMatchObject({ status: "reserved" });
+    await expect(withSpellCastLedger(ctx, (ledger) => ledger.reserve({
+      castId: intent.castId, sessionId: "session-current", actorUuid: actor.uuid,
+      casterTokenUuid: token.uuid, entryUuid: entry.uuid, spellUuid: spell.uuid, rank: 1,
+      slotId: 0, targetTokenUuids: [targetToken.uuid], messageMode: "gm", reviewToken: "old-review",
+      fingerprint: "c".repeat(64), resourceBefore: original.resourceBefore,
+    }))).rejects.toMatchObject({ code: "CAST_ALREADY_RECORDED" });
+  });
+
+  it("accepts sufficient legacy terminal resource evidence when the card has no proof block", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    const message: any = Array.from(messages.values())[0];
+    delete message.flags["foundry-vtt-mcp"].spellCast.resourceEvidence;
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    expect(review).toMatchObject({ supported: true, decision: "confirmed-observed" });
+    await expect(handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: review.reconciliationId, reviewToken: review.reviewToken,
+    }, ctx)).resolves.toMatchObject({ reconciled: true });
+  });
+
+  it("does not fall back to ledger resource facts when a present card proof is malformed", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    const message: any = Array.from(messages.values())[0];
+    message.flags["foundry-vtt-mcp"].spellCast.resourceEvidence.version = 2;
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    expect(review).toMatchObject({ supported: false, decision: null });
+  });
+
+  it("accepts valid card proof for a reserved cast with no durable terminal facts", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "reserved";
+    store.entries[intent.castId].nativeConsumed = null;
+    store.entries[intent.castId].resourceAfter = null;
+    store.entries[intent.castId].chatMessageUuid = null;
+    const card: any = Array.from(messages.values())[0];
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId, candidateMessageUuid: card.uuid,
+    }, ctx);
+    expect(review).toMatchObject({ supported: true, decision: "confirmed-observed" });
+  });
+
+  it("supports refused-unchanged only for the explicit false, no-card, unchanged branch", async () => {
+    const intent = await inspect();
+    consume = vi.fn(async () => false);
+    await expect(cast(intent)).rejects.toMatchObject({ code: "NATIVE_CONSUMPTION_REFUSED" });
+    const record = store.entries[intent.castId];
+    expect(record).toMatchObject({ status: "uncertain", nativeConsumed: false, chatMessageUuid: null });
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    expect(review).toMatchObject({ supported: true, decision: "refused-unchanged" });
+    await handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: review.reconciliationId, reviewToken: review.reviewToken,
+    }, ctx);
+    expect(store.entries[intent.castId]).toMatchObject({ status: "uncertain", nativeConsumed: false });
+  });
+
+  it("rejects stale source, changed session, and expired reconciliation reviews", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    const source = store.entries[intent.castId];
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    source.updatedAt = new Date(Date.now() + 1000).toISOString();
+    await expect(handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: review.reconciliationId, reviewToken: review.reviewToken,
+    }, ctx)).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_STALE" });
+
+    source.updatedAt = new Date().toISOString();
+    const next: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    ctx.sessionId = "session-changed";
+    await expect(handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: next.reconciliationId, reviewToken: next.reviewToken,
+    }, ctx)).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+    ctx.sessionId = "session-current";
+    const last: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "cast", sourceId: intent.castId,
+    }, ctx);
+    const expiredIntent = __spellAuditTest.intents.get(last.reconciliationId)!;
+    expiredIntent.expiresAt = 0;
+    await expect(handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: last.reconciliationId, reviewToken: last.reviewToken,
+    }, ctx)).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_EXPIRED" });
+  });
+
+  it("rejects source changes during review fingerprint hashing", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    let entered!: () => void;
+    let release!: (value: ArrayBuffer) => void;
+    const blocked = new Promise<ArrayBuffer>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const spy = vi.spyOn(globalThis.crypto.subtle, "digest").mockImplementation((() => {
+      entered();
+      return blocked;
+    }) as any);
+    try {
+      const inspection = handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+        kind: "cast", sourceId: intent.castId,
+      }, ctx);
+      await started;
+      store.entries[intent.castId].updatedAt = new Date(Date.now() + 1000).toISOString();
+      release(new ArrayBuffer(32));
+      await expect(inspection).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_STALE" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("rejects native card changes during review fingerprint hashing", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    const message: any = Array.from(messages.values())[0];
+    let entered!: () => void;
+    let release!: (value: ArrayBuffer) => void;
+    const blocked = new Promise<ArrayBuffer>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const spy = vi.spyOn(globalThis.crypto.subtle, "digest").mockImplementation((() => {
+      entered();
+      return blocked;
+    }) as any);
+    try {
+      const inspection = handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+        kind: "cast", sourceId: intent.castId,
+      }, ctx);
+      await started;
+      message.flags["foundry-vtt-mcp"].spellCast.targetTokenUuids = [];
+      release(new ArrayBuffer(32));
+      await expect(inspection).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_STALE" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("rechecks current native resources after asynchronous evidence refresh", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    let entered!: () => void;
+    let release!: (value: ArrayBuffer) => void;
+    const blocked = new Promise<ArrayBuffer>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const spy = vi.spyOn(globalThis.crypto.subtle, "digest").mockImplementation((() => {
+      entered();
+      return blocked;
+    }) as any);
+    try {
+      const inspection = handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+        kind: "cast", sourceId: intent.castId,
+      }, ctx);
+      await started;
+      entry.system.slots.slot1.prepared[0].expended = false;
+      release(new ArrayBuffer(32));
+      await expect(inspection).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_STALE" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("rejects replacement of the initially observed owned Actor during hashing", async () => {
+    const intent = await inspect();
+    await cast(intent);
+    store.entries[intent.castId].status = "uncertain";
+    const originalActor = actor;
+    let entered!: () => void;
+    let release!: (value: ArrayBuffer) => void;
+    const blocked = new Promise<ArrayBuffer>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const spy = vi.spyOn(globalThis.crypto.subtle, "digest").mockImplementation((() => {
+      entered();
+      return blocked;
+    }) as any);
+    try {
+      const inspection = handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+        kind: "cast", sourceId: intent.castId,
+      }, ctx);
+      await started;
+      ctx.game.actors.set(actor.id, { ...actor, items: actor.items });
+      release(new ArrayBuffer(32));
+      await expect(inspection).rejects.toMatchObject({ code: "SPELL_RECONCILIATION_STALE" });
+    } finally {
+      ctx.game.actors.set(originalActor.id, originalActor);
+      spy.mockRestore();
+    }
+  });
+
   it("previews without world writes and creates a native card with explicit speaker and preserved mode", async () => {
     const messageClass = (globalThis as any).ChatMessage;
     const intent = await inspect();

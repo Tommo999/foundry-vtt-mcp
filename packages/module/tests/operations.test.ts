@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { JSDOM } from "jsdom";
 
 const hooks = { once: vi.fn(), on: vi.fn() };
 class MockApplicationV2 {
@@ -25,6 +26,7 @@ describe("Foundry write operations", () => {
       user: { id: "gm-a", isGM: true },
       version: "14.0",
       system: { id: "test", version: "1" },
+      pf2e: {},
       actors: new Map(),
       items: new Map(),
       journal: new Map(),
@@ -38,6 +40,8 @@ describe("Foundry write operations", () => {
   beforeEach(() => {
     game.world.id = "world-a";
     game.user.id = "gm-a";
+    game.system = { id: "test", version: "1" };
+    delete game.settings;
     socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
     api.__test.runtime.socket = socket;
     api.__test.runtime.worldId = "world-a";
@@ -46,6 +50,11 @@ describe("Foundry write operations", () => {
     api.__test.runtime.app = { render: vi.fn() };
     api.__test.runtime.queue.clear();
     api.__test.runtime.history.length = 0;
+    api.__test.runtime.sessionId = "session-a";
+    api.__test.runtime.spellHistoryEntries = [];
+    api.__test.runtime.spellAuditPreviews.clear();
+    api.__test.runtime.spellAuditExpanded.clear();
+    api.__test.runtime.spellAuditSessionKey = undefined;
   });
 
   it("creates a system agnostic actor through Foundry document APIs", async () => {
@@ -220,6 +229,58 @@ describe("Foundry write operations", () => {
       socket,
     );
     expect(update).toHaveBeenCalledOnce();
+  });
+
+  it("routes Bridge reconciliation through the normal approval queue and hides its review token", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => undefined) };
+    const dom = new JSDOM("<!doctype html><html><body></body></html>");
+    const priorDocument = (globalThis as any).document;
+    vi.stubGlobal("document", dom.window.document);
+    const callback = vi.fn();
+    api.__test.submitLocalTool("pf2e_reconcile_spell_audit", {
+      reconciliationId: "spell-reconciliation-test", reviewToken: "review-secret-ui-only",
+    }, callback);
+    expect(api.__test.runtime.queue.size).toBe(1);
+    const id = api.__test.runtime.queue.keys().next().value;
+    const app = new api.__test.BridgeApp();
+    const root = app._renderHTML();
+    expect(root.querySelector(".request pre")?.textContent).not.toContain("review-secret-ui-only");
+    expect(socket.send).not.toHaveBeenCalled();
+    await app.approve(id);
+    expect(callback).toHaveBeenCalledOnce();
+    expect(callback.mock.calls[0][0].error.code).toBe("SPELL_RECONCILIATION_REVIEW_MISMATCH");
+    expect(socket.send).not.toHaveBeenCalled();
+    expect(api.__test.runtime.queue.size).toBe(0);
+    dom.window.close();
+    vi.stubGlobal("document", priorDocument);
+  });
+
+  it("uses current automatic-write authorization for local reconciliation requests", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => undefined) };
+    api.__test.runtime.autoWrites = true;
+    const callback = vi.fn();
+    api.__test.submitLocalTool("pf2e_reconcile_spell_audit", {
+      reconciliationId: "spell-reconciliation-auto", reviewToken: "review-secret",
+    }, callback);
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledOnce());
+    expect(api.__test.runtime.queue.size).toBe(0);
+    expect(callback.mock.calls[0][0].error.code).toBe("SPELL_RECONCILIATION_REVIEW_MISMATCH");
+    expect(socket.send).not.toHaveBeenCalled();
+  });
+
+  it("ignores a local audit read that completes after the paired socket changes", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => undefined) };
+    const callback = vi.fn();
+    api.__test.submitLocalTool("pf2e_inspect_spell_history", { offset: 0, limit: 10 }, callback);
+    api.__test.runtime.socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
+    api.__test.runtime.sessionId = "new-session";
+    await vi.waitFor(() => expect(api.__test.runtime.spellAuditSessionKey).toBeUndefined());
+    expect(callback).not.toHaveBeenCalled();
+    expect(api.__test.runtime.spellHistoryEntries).toEqual([]);
+    expect(socket.send).not.toHaveBeenCalled();
   });
 
   it("disconnect resets automatic mode and session identity", () => {

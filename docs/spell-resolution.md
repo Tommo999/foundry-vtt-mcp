@@ -15,7 +15,7 @@ Both tokens must be current documents in the same world scene and have a usable 
 
 When a valid started Combat applies to the caster's scene, the caster must be its current combatant. A valid started Combat in another scene does not govern this roll. Invalid or incomplete current combat state is rejected. The execution must match the nullable `expectedCombat` preview value.
 
-The target must be among the bridge-confirmed cast targets. The native cast card's spell UUID, exact cast rank, entry, actual-cast marker, caster speaker, mode, and bridge cast metadata are checked again before rolling.
+When the bridge-confirmed cast recorded targets, the selected target must be among them. When it recorded no targets, the resolution preview requires an explicit target choice. The native cast card's spell UUID, exact cast rank, entry, actual-cast marker, caster speaker, mode, and bridge cast metadata are checked again before rolling.
 
 ## What the actions roll
 

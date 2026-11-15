@@ -83,6 +83,9 @@ describe("shared MCP tool contracts", () => {
       "pf2e_roll_spell_attack",
       "pf2e_roll_spell_save",
       "pf2e_roll_spell_damage",
+      "pf2e_inspect_spell_history",
+      "pf2e_inspect_spell_reconciliation",
+      "pf2e_reconcile_spell_audit",
       "pf2e_roll_initiative",
       "start_encounter",
       "next_turn",
@@ -131,7 +134,7 @@ describe("shared MCP tool contracts", () => {
       "create_embedded",
       "import_compendium",
     ]);
-    expect(toolNames).toHaveLength(60);
+    expect(toolNames).toHaveLength(63);
   });
   it("classifies spell-resolution tools and constrains attack numbers", () => {
     const selection = {

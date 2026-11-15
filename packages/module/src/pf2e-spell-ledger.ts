@@ -1,11 +1,12 @@
 import type { BridgeContext } from "./bridge-context.js";
+import { withSpellAuditLock } from "./pf2e-spell-audit-lock.js";
+import { readSpellReconciliationLedger, spellAuditSourceSnapshot } from "./pf2e-spell-reconciliation-ledger.js";
 
 const MODULE_ID = "foundry-vtt-mcp";
 const SETTING = "spellCasts";
 const VERSION = 1;
 const MAX_RECORDS = 5000;
 const MAX_RECENT = 10;
-const worldLocks = new Map<string, Promise<void>>();
 
 export type SpellCastResourceKind =
   "none" | "actorFocus" | "preparedSlot" | "rankPool" | "innateUse";
@@ -84,6 +85,9 @@ export type SpellCastActorSummary = {
   entries: Array<{
     castId: string;
     status: SpellCastRecord["status"];
+    originalStatus: SpellCastRecord["status"];
+    effectiveStatus: SpellCastRecord["status"] | "reconciled";
+    reconciliationId: string | null;
     spellUuid: string;
     rank: number;
     slotId: number | null;
@@ -368,27 +372,6 @@ async function persist(
   }
   sameWorld(ctx, expectedWorldId);
 }
-async function withWorldLock<T>(
-  ctx: BridgeContext,
-  task: (worldId: string) => Promise<T>,
-): Promise<T> {
-  const worldId = worldIdOf(ctx);
-  const previous = worldLocks.get(worldId) ?? Promise.resolve();
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const tail = previous.then(() => gate);
-  worldLocks.set(worldId, tail);
-  await previous;
-  try {
-    sameWorld(ctx, worldId);
-    return await task(worldId);
-  } finally {
-    release();
-    if (worldLocks.get(worldId) === tail) worldLocks.delete(worldId);
-  }
-}
 function isoNow(): string {
   return new Date().toISOString();
 }
@@ -454,6 +437,7 @@ function actorSummary(
   ledger: { version: 1; entries: Record<string, SpellCastRecord> },
   actorUuid: string,
   limit: number,
+  reconciliationEntries: Record<string, any>,
 ): SpellCastActorSummary {
   if (!uuid(actorUuid))
     throw fault(
@@ -468,9 +452,19 @@ function actorSummary(
   const all = Object.values(ledger.entries)
     .filter((record) => record.actorUuid === actorUuid)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const entries = all.slice(0, limit).map((record) => ({
+  const effective = all.map((record) => {
+    const snapshot = spellAuditSourceSnapshot("cast", record);
+    const overlay = Object.values(reconciliationEntries).find((entry: any) =>
+      entry.sourceKind === "cast" && entry.sourceId === record.castId &&
+      entry.worldId === record.worldId && entry.sourceSnapshot === snapshot);
+    return { record, overlay: overlay ?? null };
+  });
+  const entries = effective.slice(0, limit).map(({ record, overlay }) => ({
     castId: record.castId,
     status: record.status,
+    originalStatus: record.status,
+    effectiveStatus: overlay ? "reconciled" as const : record.status,
+    reconciliationId: overlay?.reconciliationId ?? null,
     spellUuid: record.spellUuid,
     rank: record.rank,
     slotId: record.slotId,
@@ -485,8 +479,8 @@ function actorSummary(
     version: VERSION,
     actorUuid,
     recordCount: all.length,
-    blockedCount: all.filter(
-      (record) => record.status === "reserved" || record.status === "uncertain",
+    blockedCount: effective.filter(
+      ({ record, overlay }) => !overlay && (record.status === "reserved" || record.status === "uncertain"),
     ).length,
     capacity: MAX_RECORDS,
     capacityRemaining: MAX_RECORDS - Object.keys(ledger.entries).length,
@@ -499,7 +493,7 @@ export async function withSpellCastLedger<T>(
   ctx: BridgeContext,
   task: (transaction: SpellCastLedgerTransaction) => Promise<T>,
 ): Promise<T> {
-  return withWorldLock(ctx, async (lockedWorldId) => {
+  return withSpellAuditLock(ctx, async (lockedWorldId) => {
     let active = true;
     let operation = Promise.resolve();
     const serialized = <R>(work: () => Promise<R>): Promise<R> => {
@@ -540,6 +534,7 @@ export async function withSpellCastLedger<T>(
             );
           validReservation(input);
           const current = readCurrent();
+          const reconciliation = readSpellReconciliationLedger(ctx);
           const duplicate = getEntry(current.entries, input.castId);
           if (duplicate)
             throw fault(
@@ -550,11 +545,15 @@ export async function withSpellCastLedger<T>(
                 status: duplicate.status,
               },
             );
-          const blocker = Object.values(current.entries).find(
-            (record) =>
-              record.actorUuid === input.actorUuid &&
-              (record.status === "reserved" || record.status === "uncertain"),
-          );
+          const blocker = Object.values(current.entries).find((record) => {
+            if (record.actorUuid !== input.actorUuid ||
+              (record.status !== "reserved" && record.status !== "uncertain")) return false;
+            return !Object.values(reconciliation.entries).some((entry) =>
+              entry.sourceKind === "cast" && entry.sourceId === record.castId &&
+              entry.worldId === record.worldId &&
+              entry.sourceSnapshot === spellAuditSourceSnapshot("cast", record) &&
+              (entry.decision === "confirmed-observed" || entry.decision === "refused-unchanged"));
+          });
           if (blocker)
             throw fault(
               "SPELL_CAST_RECONCILIATION_REQUIRED",
@@ -730,7 +729,9 @@ export async function withSpellCastLedger<T>(
             "LEDGER_TRANSACTION_CLOSED",
             "Spell-cast ledger transaction is closed.",
           );
-        return actorSummary(readCurrent(), actorUuid, limit);
+        const current = readCurrent();
+        const reconciliation = readSpellReconciliationLedger(ctx);
+        return actorSummary(current, actorUuid, limit, reconciliation.entries);
       },
     };
     try {
@@ -756,6 +757,10 @@ function observeStatus(
   }
 }
 
+export function readSpellCastRecords(ctx: BridgeContext) {
+  return clone(readLedger(ctx));
+}
+
 export function readSpellCastActorSummary(
   ctx: BridgeContext,
   actorUuid: string,
@@ -773,7 +778,10 @@ export function readSpellCastActorSummary(
       "Actor ledger summary limit must be between 1 and 10.",
     );
   sameWorld(ctx, worldId);
-  return actorSummary(readLedger(ctx), actorUuid, limit);
+  return actorSummary(
+    readLedger(ctx), actorUuid, limit,
+    readSpellReconciliationLedger(ctx).entries,
+  );
 }
 
 /** Read-only correlation lookup for a native actual-cast chat card. */

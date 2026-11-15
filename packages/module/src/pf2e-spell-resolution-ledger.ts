@@ -1,10 +1,10 @@
 import type { BridgeContext } from "./bridge-context.js";
+import { withSpellAuditLock } from "./pf2e-spell-audit-lock.js";
 
 const MODULE_ID = "foundry-vtt-mcp";
 const SETTING = "spellResolutions";
 const VERSION = 1;
 const MAX_RECORDS = 5000;
-const locks = new Map<string, Promise<void>>();
 
 export type ResolutionAction = "attack" | "save" | "damage";
 export type ResolutionStatus = "reserved" | "confirmed" | "uncertain";
@@ -228,41 +228,20 @@ function read(ctx: BridgeContext) {
     entries: Record<string, SpellResolutionRecord>;
   };
 }
-function lock<T>(
-  ctx: BridgeContext,
-  operation: (id: string) => Promise<T>,
-): Promise<T> {
-  const id = worldId(ctx);
-  const previous = locks.get(id) ?? Promise.resolve();
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const tail = previous.then(() => gate);
-  locks.set(id, tail);
-  return previous.then(async () => {
-    try {
-      sameWorld(ctx, id);
-      return await operation(id);
-    } finally {
-      release();
-      if (locks.get(id) === tail) locks.delete(id);
-    }
-  });
-}
 function statusById(
   ctx: BridgeContext,
   id: string,
   resolutionId: string,
-): ResolutionStatus | null {
+): { status: ResolutionStatus | null; known: boolean } {
   try {
     sameWorld(ctx, id);
     const entries = read(ctx).entries;
-    return Object.hasOwn(entries, resolutionId)
-      ? entries[resolutionId].status
-      : null;
+    return {
+      status: Object.hasOwn(entries, resolutionId) ? entries[resolutionId].status : null,
+      known: true,
+    };
   } catch {
-    return null;
+    return { status: null, known: false };
   }
 }
 function bindingMatches(ctx: BridgeContext, record: SpellResolutionRecord) {
@@ -324,7 +303,7 @@ export async function reserveSpellResolution(
   ctx: BridgeContext,
   input: SpellResolutionReservation,
 ): Promise<SpellResolutionRecord> {
-  return lock(ctx, async (id) => {
+  return withSpellAuditLock(ctx, async (id) => {
     if (
       !input ||
       !bounded(input.resolutionId, 128) ||
@@ -407,7 +386,7 @@ export async function reserveSpellResolution(
         "The resolution reservation may or may not be stored; no native roll may proceed.",
         {
           resolutionId: record.resolutionId,
-          status: statusById(ctx, id, record.resolutionId),
+          ...statusById(ctx, id, record.resolutionId),
           causeCode: (cause as any)?.code ?? null,
         },
       );
@@ -424,7 +403,7 @@ export async function finalizeSpellResolution(
     rollTotal: number | null;
   },
 ): Promise<SpellResolutionRecord> {
-  return lock(ctx, async (id) => {
+  return withSpellAuditLock(ctx, async (id) => {
     if (
       !bounded(resolutionId, 128) ||
       !["confirmed", "uncertain"].includes(status) ||
@@ -491,7 +470,7 @@ export async function finalizeSpellResolution(
         "Resolution finalization was not confirmed; the settings store was not written again.",
         {
           resolutionId,
-          status: statusById(ctx, id, resolutionId),
+          ...statusById(ctx, id, resolutionId),
           messageUuid: outcome.messageUuid,
           causeCode: (cause as any)?.code ?? null,
         },

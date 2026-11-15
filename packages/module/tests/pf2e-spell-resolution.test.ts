@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handlePF2eSpellResolution } from "../src/pf2e-spell-resolution.js";
+import { handlePF2eSpellAudit } from "../src/pf2e-spell-audit.js";
+import { reserveSpellResolution } from "../src/pf2e-spell-resolution-ledger.js";
+import { withSpellCastLedger } from "../src/pf2e-spell-ledger.js";
+import { withCombatLock } from "../src/encounters.js";
 
 class CheckRoll {
   evaluated = true;
@@ -238,6 +242,7 @@ function fixture(
     entries: { [castRecord.castId]: castRecord },
   };
   let resolutions: any = undefined;
+  let reconciliations: any = undefined;
   const hooks = new Map<string, Map<number, Function>>();
   let hookId = 0;
   const HookApi = {
@@ -340,7 +345,7 @@ function fixture(
       getDamage: nativeGetDamage,
       rollDamage: async function (event: any) {
         const prepared = await this.getDamage({
-          target: event.target ? null : null,
+          target: event.target ? targetToken : null,
         });
         const roll = new DamageRoll(6);
         post("damage", [...prepared.context.options][0], roll);
@@ -361,11 +366,14 @@ function fixture(
         ? ledger
         : key === "spellResolutions"
           ? resolutions
+          : key === "spellReconciliations"
+            ? reconciliations
           : undefined,
     ),
     set: vi.fn(async (_namespace: string, key: string, value: any) => {
       if (key === "spellCasts") ledger = structuredClone(value);
-      else resolutions = structuredClone(value);
+      else if (key === "spellResolutions") resolutions = structuredClone(value);
+      else if (key === "spellReconciliations") reconciliations = structuredClone(value);
     }),
   };
   const ctx: any = {
@@ -424,6 +432,7 @@ function fixture(
     setResolutions(value: any) {
       resolutions = value;
     },
+    get reconciliations() { return reconciliations; },
     get resolutions() {
       return resolutions;
     },
@@ -432,6 +441,16 @@ function fixture(
     },
     get savesRoll() {
       return savesRoll;
+    },
+    setCombat() {
+      const combatant: any = { uuid: "Combatant.caster", token, tokenUuid: token.uuid };
+      const combat: any = {
+        id: "combat", uuid: "Combat.combat", started: true, isActive: true,
+        scene, sceneId: scene.id, round: 1, turn: 0, combatant, combatants: [combatant],
+      };
+      ctx.game.combats = new Map([[combat.id, combat]]);
+      ctx.game.combat = combat;
+      return combat;
     },
   };
 }
@@ -466,6 +485,127 @@ function resolutionRecord(overrides: Record<string, unknown> = {}) {
 }
 
 describe("PF2e native spell resolution", () => {
+  it.each(["attack", "save", "damage"] as const)("reconciles unresolved %s native rolls and preserves their source record", async (action) => {
+    const f = fixture(action);
+    const preview: any = await handlePF2eSpellResolution("pf2e_inspect_spell_resolution", f.selection, f.ctx);
+    const tool = action === "attack" ? "pf2e_roll_spell_attack" : action === "save" ? "pf2e_roll_spell_save" : "pf2e_roll_spell_damage";
+    const result: any = await handlePF2eSpellResolution(tool, {
+      ...f.selection, resolutionId: preview.resolutionId, reviewToken: preview.reviewToken,
+      expectedCombat: preview.expectedCombat,
+    }, f.ctx);
+    expect(result.resolution).toBe("confirmed");
+    const stored = f.resolutions;
+    const row = stored.entries[preview.resolutionId];
+    row.status = "uncertain";
+    f.setResolutions(stored);
+    const original = structuredClone(row);
+    const priorConfig = (globalThis as any).CONFIG;
+    delete f.ctx.game.CONFIG;
+    (globalThis as any).CONFIG = { Dice: { rolls: [CheckRoll, DamageRoll] } };
+    try {
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "resolution", sourceId: preview.resolutionId,
+    }, f.ctx);
+    expect(review).toMatchObject({ supported: true, decision: "confirmed-observed" });
+    const reconciled = await handlePF2eSpellAudit("pf2e_reconcile_spell_audit", {
+      reconciliationId: review.reconciliationId, reviewToken: review.reviewToken,
+    }, f.ctx);
+    expect(reconciled).toMatchObject({ reconciled: true, effectiveStatus: "reconciled" });
+    expect(f.resolutions.entries[preview.resolutionId]).toEqual(original);
+    expect(Object.keys(f.reconciliations.entries)).toEqual([review.reconciliationId]);
+    const { worldId: _world, userId: _user, createdAt: _created, updatedAt: _updated,
+      status: _status, messageUuid: _message, rollType: _type, rollTotal: _total, ...reservation } = original;
+    await expect(reserveSpellResolution(f.ctx, { ...reservation, resolutionId: "spell-resolution-replay" } as any))
+      .rejects.toMatchObject({ code: "SPELL_RESOLUTION_ALREADY_RECORDED" });
+    } finally {
+      if (priorConfig === undefined) delete (globalThis as any).CONFIG;
+      else (globalThis as any).CONFIG = priorConfig;
+    }
+  });
+
+  it("refuses native resolution evidence when the PF2e action context disagrees", async () => {
+    const f = fixture("attack");
+    const preview: any = await handlePF2eSpellResolution("pf2e_inspect_spell_resolution", f.selection, f.ctx);
+    await handlePF2eSpellResolution("pf2e_roll_spell_attack", {
+      ...f.selection, resolutionId: preview.resolutionId, reviewToken: preview.reviewToken,
+      expectedCombat: preview.expectedCombat,
+    }, f.ctx);
+    const row = f.resolutions.entries[preview.resolutionId];
+    row.status = "uncertain";
+    f.setResolutions(f.resolutions);
+    const message: any = Array.from(f.messages.values()).find((item: any) => item.uuid === row.messageUuid);
+    message.updateSource({ flags: { pf2e: { context: { ...message.flags.pf2e.context, action: "other-action" } } } });
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "resolution", sourceId: preview.resolutionId,
+    }, f.ctx);
+    expect(review).toMatchObject({ supported: false, decision: null });
+  });
+
+  it("reconciles attack-spell damage only with its explicit native target context", async () => {
+    const f = fixture("damage", { attackDamage: true });
+    const preview: any = await handlePF2eSpellResolution("pf2e_inspect_spell_resolution", f.selection, f.ctx);
+    const result: any = await handlePF2eSpellResolution("pf2e_roll_spell_damage", {
+      ...f.selection, resolutionId: preview.resolutionId, reviewToken: preview.reviewToken,
+      expectedCombat: preview.expectedCombat,
+    }, f.ctx);
+    const row = f.resolutions.entries[preview.resolutionId];
+    row.status = "uncertain";
+    f.setResolutions(f.resolutions);
+    const review: any = await handlePF2eSpellAudit("pf2e_inspect_spell_reconciliation", {
+      kind: "resolution", sourceId: preview.resolutionId,
+    }, f.ctx);
+    expect(review).toMatchObject({ supported: true, decision: "confirmed-observed", evidenceMessageUuid: result.messageUuid });
+  });
+
+  it("avoids cast-audit/combat lock inversion while a native roll is pending", async () => {
+    const f = fixture("attack");
+    const combat = f.setCombat();
+    const preview: any = await handlePF2eSpellResolution(
+      "pf2e_inspect_spell_resolution", f.selection, f.ctx,
+    );
+    const nativeStarted = vi.fn();
+    let finishNative!: () => void;
+    const nativeGate = new Promise<void>((resolve) => { finishNative = resolve; });
+    f.spell.rollAttack.mockImplementationOnce(async (_event: any, _number: number, options: any) => {
+      nativeStarted();
+      await nativeGate;
+      const roll = new CheckRoll(19);
+      const msg = f.post("attack", options.extraRollOptions[0], roll);
+      options.callback(roll, "criticalSuccess", msg);
+      return roll;
+    });
+    const operation = handlePF2eSpellResolution("pf2e_roll_spell_attack", {
+      ...f.selection, resolutionId: preview.resolutionId, reviewToken: preview.reviewToken,
+      expectedCombat: preview.expectedCombat,
+    }, f.ctx);
+    await vi.waitFor(() => expect(nativeStarted).toHaveBeenCalledOnce());
+    expect(f.ctx.game.settings.set.mock.calls.filter((call: any[]) => call[1] === "spellResolutions")).toHaveLength(1);
+
+    let castCallbackEntered!: () => void;
+    const castWaiting = new Promise<void>((resolve) => { castCallbackEntered = resolve; });
+    const castAuditThenCombat = withSpellCastLedger(f.ctx, async () => {
+      castCallbackEntered();
+      return withCombatLock(combat, f.ctx, async () => undefined);
+    });
+    await castWaiting;
+    finishNative();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let result: any;
+    try {
+      result = await Promise.race([
+        Promise.all([operation, castAuditThenCombat]).then(([value]) => value),
+        new Promise((_, reject) => {
+          timeout = setTimeout(() => reject(new Error("spell audit/combat lock inversion deadlocked")), 1500);
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+    expect(result.resolution).toBe("confirmed");
+    expect(f.resolutions.entries[preview.resolutionId].status).toBe("confirmed");
+    expect(f.ctx.game.settings.set.mock.calls.filter((call: any[]) => call[1] === "spellResolutions")).toHaveLength(2);
+  });
+
   it.each(["attack", "save", "damage"] as const)(
     "previews %s from exact confirmed native cast evidence without writes",
     async (action) => {
@@ -905,6 +1045,25 @@ describe("PF2e native spell resolution", () => {
     expect(f.resolutions.entries[preview.resolutionId].status).toBe(
       "confirmed",
     );
+  });
+
+  it("does not invent a roll type or outcome when the native call throws before returning a roll", async () => {
+    const f = fixture("attack");
+    const preview: any = await handlePF2eSpellResolution(
+      "pf2e_inspect_spell_resolution", f.selection, f.ctx,
+    );
+    f.spell.rollAttack.mockRejectedValueOnce(new Error("native API failed before returning a roll"));
+    await expect(handlePF2eSpellResolution("pf2e_roll_spell_attack", {
+      ...f.selection, resolutionId: preview.resolutionId, reviewToken: preview.reviewToken,
+      expectedCombat: null,
+    }, f.ctx)).rejects.toMatchObject({
+      code: "PARTIAL_FAILURE",
+      partial: { rollType: null, rollTotal: null, auditStatus: "uncertain", auditStateKnown: true },
+    });
+    expect(f.resolutions.entries[preview.resolutionId]).toMatchObject({
+      status: "uncertain", messageUuid: null, rollType: null, rollTotal: null,
+    });
+    expect(f.ctx.game.settings.set).toHaveBeenCalledTimes(2);
   });
 
   it("uses an isolated heightened native variant and posts attack damage against the reviewed full target UUID", async () => {

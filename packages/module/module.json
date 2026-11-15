@@ -2,7 +2,7 @@
   "id": "foundry-vtt-mcp",
   "title": "Foundry VTT MCP Bridge",
   "description": "Connect local MCP agents to a GM-controlled Foundry world.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "authors": [
     {
       "name": "Foundry VTT MCP contributors"

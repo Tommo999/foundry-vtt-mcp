@@ -147,6 +147,28 @@ describe("PF2e spell-resolution ledger", () => {
     expect(fake.ctx.game.settings.set).toHaveBeenCalledTimes(1);
   });
 
+  it("marks terminal status unknown when readback is unavailable after the write", async () => {
+    const fake = makeContext();
+    await reserveSpellResolution(fake.ctx, input());
+    const get = fake.ctx.game.settings.get;
+    let failNextRead = false;
+    fake.ctx.game.settings.get = vi.fn((_module: string, key: string) => {
+      if (failNextRead && key === "spellResolutions") throw new Error("readback unavailable");
+      return get(_module, key);
+    });
+    fake.ctx.game.settings.set.mockImplementationOnce(async (_module: string, _key: string, value: any) => {
+      fake.setStored(value);
+      failNextRead = true;
+    });
+    await expect(finalizeSpellResolution(fake.ctx, "spell-resolution-a", "confirmed", {
+      messageUuid: "ChatMessage.roll", rollType: "check", rollTotal: 21,
+    })).rejects.toMatchObject({
+      code: "SPELL_RESOLUTION_FINALIZATION_UNCONFIRMED",
+      partial: { status: null, known: false },
+    });
+    expect(fake.ctx.game.settings.set).toHaveBeenCalledTimes(2);
+  });
+
   it("fails closed for malformed, cross-world and duplicate semantic records", async () => {
     const first = makeContext();
     const record = await reserveSpellResolution(first.ctx, input());
