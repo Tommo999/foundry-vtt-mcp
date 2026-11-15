@@ -1,6 +1,6 @@
 {
   "name": "@foundry-mcp/shared",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {

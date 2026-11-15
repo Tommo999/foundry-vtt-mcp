@@ -1,5 +1,6 @@
 import type { BridgeContext } from "./bridge-context.js";
 import { withSpellAuditLock } from "./pf2e-spell-audit-lock.js";
+import { spellEffectAuditProjection, validSpellEffectAuditProjection } from "./pf2e-spell-effect-ledger.js";
 
 const MODULE_ID = "foundry-vtt-mcp";
 const SETTING = "spellReconciliations";
@@ -12,7 +13,7 @@ export type SpellReconciliationRecord = {
   worldId: string;
   userId: string;
   createdAt: string;
-  sourceKind: "cast" | "resolution";
+  sourceKind: "cast" | "resolution" | "effect";
   sourceId: string;
   sourceFingerprint: string;
   sourceSnapshot: string;
@@ -24,6 +25,16 @@ export type SpellReconciliationRecord = {
   resourceAfter: unknown | null;
   rollType: "check" | "damage" | null;
   rollTotal: number | null;
+  targetActorUuid?: string;
+  targetTokenUuid?: string;
+  semanticKey?: string;
+  choice?: unknown;
+  expectedOperation?: string;
+  beforeConditionUuid?: string | null;
+  beforeConditionValue?: number | null;
+  outcomeKind?: string;
+  observedValue?: number | null;
+  documentUuids?: string[];
 };
 
 export type SpellReconciliationLedger = {
@@ -48,7 +59,8 @@ function bounded(value: unknown, max: number): value is string {
 function exact(value: Record<string, unknown>, keys: string[]): boolean {
   return Object.keys(value).sort().join("\n") === [...keys].sort().join("\n");
 }
-export function spellAuditSourceSnapshot(kind: "cast" | "resolution", source: any): string {
+export function spellAuditSourceSnapshot(kind: "cast" | "resolution" | "effect", source: any): string {
+  if (kind === "effect") return JSON.stringify(spellEffectAuditProjection(source));
   const projection = kind === "cast" ? {
     sourceKind: kind, sourceId: source.castId, worldId: source.worldId, actorUuid: source.actorUuid,
     casterTokenUuid: source.casterTokenUuid, entryUuid: source.entryUuid, spellUuid: source.spellUuid,
@@ -85,7 +97,8 @@ function validSourceSnapshot(overlay: any): boolean {
   try { source = JSON.parse(overlay.sourceSnapshot); } catch { return false; }
   const castKeys = ["sourceKind", "sourceId", "worldId", "actorUuid", "casterTokenUuid", "entryUuid", "spellUuid", "rank", "slotId", "targetTokenUuids", "messageMode", "createdAt", "updatedAt", "status", "nativeConsumed", "resourceBefore", "resourceAfter", "chatMessageUuid"];
   const resolutionKeys = ["sourceKind", "sourceId", "worldId", "actorUuid", "operationKey", "castId", "castMessageUuid", "action", "messageMode", "casterActorUuid", "targetActorUuid", "casterTokenUuid", "targetTokenUuid", "attackNumber", "createdAt", "updatedAt", "status", "messageUuid", "rollType", "rollTotal"];
-  if (!plain(source) || !exact(source, overlay.sourceKind === "cast" ? castKeys : resolutionKeys) ||
+  const effectKeys = ["sourceKind", "sourceId", "worldId", "actorUuid", "casterTokenUuid", "targetActorUuid", "targetTokenUuid", "castMessageUuid", "castId", "semanticKey", "choice", "reviewFingerprint", "expectedOperation", "beforeConditionUuid", "beforeConditionValue", "status", "outcome"];
+  if (!plain(source) || !exact(source, overlay.sourceKind === "cast" ? castKeys : overlay.sourceKind === "resolution" ? resolutionKeys : effectKeys) ||
     JSON.stringify(source) !== overlay.sourceSnapshot || source.worldId !== overlay.worldId ||
     source.sourceKind !== overlay.sourceKind || source.sourceId !== overlay.sourceId || source.actorUuid !== overlay.actorUuid) return false;
   if (overlay.sourceKind === "cast") {
@@ -118,6 +131,25 @@ function validSourceSnapshot(overlay: any): boolean {
           : overlay.resourceBefore.value !== null && overlay.resourceAfter.value === overlay.resourceBefore.value - overlay.resourceBefore.cost && overlay.resourceAfter.max === overlay.resourceBefore.max) &&
       overlay.rollType === null && overlay.rollTotal === null;
   }
+  if (overlay.sourceKind === "effect") {
+    const outcome = source.outcome;
+    const knownOutcomeDocs = outcome?.documentUuids ?? [];
+    const expectedOutcomeKind = source.choice?.kind === "effect" ? "effect-created" :
+      source.expectedOperation === "already-satisfied" ? "already-satisfied" :
+        source.expectedOperation === "create-condition" ? "condition-created" : "condition-increased";
+    const expectedValue = source.choice?.kind === "effect" ? null : source.choice?.value;
+    return overlay.decision === "confirmed-observed" && validSpellEffectAuditProjection(source) &&
+      overlay.outcomeKind === expectedOutcomeKind && overlay.observedValue === expectedValue && Array.isArray(overlay.documentUuids) &&
+      overlay.documentUuids.length > 0 && overlay.documentUuids.length <= 30 &&
+      overlay.documentUuids.every((uuid: unknown) => bounded(uuid, 512)) && new Set(overlay.documentUuids).size === overlay.documentUuids.length &&
+      (outcome === null ? source.choice.kind === "effect" && source.expectedOperation === "create-effect" && overlay.documentUuids.length === 1 :
+        JSON.stringify(overlay.documentUuids) === JSON.stringify(knownOutcomeDocs) && outcome.kind === expectedOutcomeKind && outcome.observedValue === expectedValue) &&
+      overlay.evidenceMessageUuid === null && overlay.resourceBefore === null && overlay.resourceAfter === null && overlay.rollType === null && overlay.rollTotal === null &&
+      overlay.targetActorUuid === source.targetActorUuid && overlay.targetTokenUuid === source.targetTokenUuid &&
+      overlay.semanticKey === source.semanticKey && JSON.stringify(overlay.choice) === JSON.stringify(source.choice) &&
+      overlay.expectedOperation === source.expectedOperation && overlay.beforeConditionUuid === source.beforeConditionUuid &&
+      overlay.beforeConditionValue === source.beforeConditionValue && overlay.actorUuid === source.actorUuid;
+  }
   return overlay.decision === "confirmed-observed" && ["reserved", "uncertain"].includes(source.status) &&
     bounded(source.operationKey, 256) && bounded(source.castId, 128) && bounded(source.castMessageUuid, 512) &&
     bounded(source.sourceId, 128) && bounded(source.worldId, 128) && bounded(source.actorUuid, 512) &&
@@ -140,12 +172,13 @@ const keys = [
   "evidenceMessageUuid", "resourceBefore", "resourceAfter", "rollType", "rollTotal",
 ];
 function validRecord(value: unknown, key?: string): value is SpellReconciliationRecord {
-  if (!plain(value) || !exact(value, keys)) return false;
+  const effectKeys = [...keys, "targetActorUuid", "targetTokenUuid", "semanticKey", "choice", "expectedOperation", "beforeConditionUuid", "beforeConditionValue", "outcomeKind", "observedValue", "documentUuids"];
+  if (!plain(value) || !exact(value, value.sourceKind === "effect" ? effectKeys : keys)) return false;
   const valid = bounded(value.reconciliationId, 128) &&
     (key === undefined || key === value.reconciliationId) &&
     bounded(value.worldId, 128) && bounded(value.userId, 128) &&
     Number.isFinite(Date.parse(value.createdAt)) &&
-    ["cast", "resolution"].includes(value.sourceKind) && bounded(value.sourceId, 128) &&
+    ["cast", "resolution", "effect"].includes(value.sourceKind) && bounded(value.sourceId, 128) &&
     /^[a-f0-9]{64}$/.test(value.sourceFingerprint) &&
     bounded(value.sourceSnapshot, 65536) && bounded(value.actorUuid, 512) &&
     ["confirmed-observed", "refused-unchanged"].includes(value.decision) &&
@@ -155,7 +188,13 @@ function validRecord(value: unknown, key?: string): value is SpellReconciliation
     (value.resourceAfter === null || validResource(value.resourceAfter)) &&
     (value.rollType === null || ["check", "damage"].includes(value.rollType)) &&
     (value.rollTotal === null || Number.isFinite(value.rollTotal)) &&
-    (value.sourceKind === "cast"
+    (value.sourceKind === "effect"
+      ? value.resourceBefore === null && value.resourceAfter === null && value.rollType === null && value.rollTotal === null &&
+        bounded(value.targetActorUuid, 512) && bounded(value.targetTokenUuid, 512) && bounded(value.semanticKey, 2048) &&
+        (value.beforeConditionUuid === null || bounded(value.beforeConditionUuid, 512)) &&
+        (value.beforeConditionValue === null || Number.isSafeInteger(value.beforeConditionValue) && value.beforeConditionValue >= 0) &&
+        Array.isArray(value.documentUuids) && value.documentUuids.every((uuid: unknown) => bounded(uuid, 512))
+      : value.sourceKind === "cast"
       ? value.rollType === null && value.rollTotal === null
       : value.decision === "confirmed-observed" && value.rollType !== null && value.rollTotal !== null);
   return valid && validSourceSnapshot(value);

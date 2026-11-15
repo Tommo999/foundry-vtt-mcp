@@ -4,6 +4,10 @@ import { requirePF2e } from "./pf2e";
 import { inspectCurrentSpellCastResource } from "./pf2e-spell-cast";
 import { readSpellCastRecords, type SpellCastRecord, type SpellCastResourceSnapshot } from "./pf2e-spell-ledger";
 import { readSpellResolutionRecords, type SpellResolutionRecord } from "./pf2e-spell-resolution-ledger";
+import { readSpellEffectLedger, type SpellEffectRecord } from "./pf2e-spell-effect-ledger";
+import { resolvePF2eTarget } from "./pf2e-target";
+import { nativeCompendiumSourceUuid } from "./pf2e-native-source";
+import { entriesFor, isCurrentNativeEntry } from "./pf2e-spellcasting";
 import {
   appendSpellReconciliation,
   readSpellReconciliationLedger, spellAuditSourceSnapshot, type SpellReconciliationDecision,
@@ -17,13 +21,14 @@ type AuditTool = Extract<ToolName,
   "pf2e_inspect_spell_history" | "pf2e_inspect_spell_reconciliation" | "pf2e_reconcile_spell_audit">;
 type ReconciliationIntent = {
   id: string; token: string; worldId: string; userId: string; sessionId: string;
-  expiresAt: number; sourceKind: "cast" | "resolution"; sourceId: string;
+  expiresAt: number; sourceKind: "cast" | "resolution" | "effect"; sourceId: string;
   sourceSnapshot: string; sourceFingerprint: string; actorUuid: string;
   decision: SpellReconciliationDecision; evidenceMessageUuid: string | null;
   resourceBefore: SpellCastResourceSnapshot | null;
   resourceAfter: SpellCastResourceSnapshot | null;
   rollType: "check" | "damage" | null; rollTotal: number | null;
   evidenceFingerprint: string;
+  effectEvidence: Record<string, any> | null;
 };
 const intents = new Map<string, ReconciliationIntent>();
 
@@ -39,6 +44,16 @@ function values(collection: any): any[] {
   if (collection && typeof collection.values === "function") return Array.from(collection.values());
   if (collection && typeof collection[Symbol.iterator] === "function") return Array.from(collection);
   return [];
+}
+function owns(collection: any, document: any): boolean {
+  return Boolean(collection && document && (typeof collection.get === "function"
+    ? collection.get(document.id) === document : values(collection).includes(document)));
+}
+function currentActorForToken(actor: any, token: any, ctx: PF2eContext): boolean {
+  if (!actor || actor.documentName !== "Actor" || actor.compendium) return false;
+  if (token && token.actor !== actor) return false;
+  if (!actor.parent && actor.isEmbedded !== true) return owns(ctx.game?.actors, actor);
+  return token?.actor === actor && (actor.parent === token || actor.token === token || actor.token?.document === token);
 }
 function canonical(value: any): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -118,19 +133,25 @@ function exactCastMessage(message: any, record: SpellCastRecord, ctx: PF2eContex
   const evidence = moduleCast.resourceEvidence;
   return { ok: true, evidence: { source, evidence } };
 }
-function sourceRecord(ctx: PF2eContext, kind: "cast" | "resolution", sourceId: string): SpellCastRecord | SpellResolutionRecord {
+function sourceRecord(ctx: PF2eContext, kind: "cast" | "resolution" | "effect", sourceId: string): SpellCastRecord | SpellResolutionRecord | SpellEffectRecord {
   if (kind === "cast") {
     const value = readSpellCastRecords(ctx);
     if (!Object.hasOwn(value.entries, sourceId))
       throw fail("SPELL_AUDIT_SOURCE_NOT_FOUND", "The selected spell-cast audit record was not found.");
     return structuredClone(value.entries[sourceId]) as SpellCastRecord;
   }
+  if (kind === "effect") {
+    const ledger = readSpellEffectLedger(ctx);
+    const value = Object.values(ledger.entries).find((entry) => entry.applicationId === sourceId);
+    if (!value) throw fail("SPELL_AUDIT_SOURCE_NOT_FOUND", "The selected spell-effect audit record was not found.");
+    return value;
+  }
   const value = readSpellResolutionRecords(ctx).entries[sourceId];
   if (!value) throw fail("SPELL_AUDIT_SOURCE_NOT_FOUND", "The selected spell-resolution audit record was not found.");
   return value;
 }
-function sourceKindId(kind: "cast" | "resolution", record: SpellCastRecord | SpellResolutionRecord): string {
-  return kind === "cast" ? (record as SpellCastRecord).castId : (record as SpellResolutionRecord).resolutionId;
+function sourceKindId(kind: "cast" | "resolution" | "effect", record: SpellCastRecord | SpellResolutionRecord | SpellEffectRecord): string {
+  return kind === "cast" ? (record as SpellCastRecord).castId : kind === "resolution" ? (record as SpellResolutionRecord).resolutionId : (record as SpellEffectRecord).applicationId;
 }
 function castHistoryRecord(record: SpellCastRecord, overlay: any) {
   return {
@@ -164,13 +185,34 @@ function resolutionHistoryRecord(record: SpellResolutionRecord, overlay: any) {
     rollType: record.rollType, rollTotal: record.rollTotal,
   };
 }
+function effectHistoryRecord(record: SpellEffectRecord, overlay: any) {
+  return {
+    kind: "effect", id: record.applicationId, actorUuid: record.casterActorUuid,
+    targetActorUuid: record.targetActorUuid, targetTokenUuid: record.targetTokenUuid,
+    castId: record.castId, castMessageUuid: record.castMessageUuid, casterTokenUuid: record.casterTokenUuid,
+    semanticKey: record.semanticKey, choice: structuredClone(record.choice),
+    expectedOperation: record.expectedOperation, beforeConditionUuid: record.beforeConditionUuid,
+    beforeConditionValue: record.beforeConditionValue, reviewFingerprint: record.reviewFingerprint,
+    createdAt: record.createdAt, updatedAt: record.updatedAt, originalStatus: record.status,
+    effectiveStatus: overlay ? "reconciled" : record.status,
+    reconciliationId: overlay?.reconciliationId ?? null, reconciliationDecision: overlay?.decision ?? null,
+    evidenceMessageUuid: overlay?.evidenceMessageUuid ?? null,
+    evidenceTargetActorUuid: overlay?.targetActorUuid ?? null,
+    evidenceTargetTokenUuid: overlay?.targetTokenUuid ?? null,
+    evidenceChoice: overlay?.choice ?? null, evidenceExpectedOperation: overlay?.expectedOperation ?? null,
+    evidenceOutcomeKind: overlay?.outcomeKind ?? null, evidenceDocumentUuids: overlay?.documentUuids ?? null,
+    evidenceObservedValue: overlay?.observedValue ?? null, outcome: record.outcome ? structuredClone(record.outcome) : null,
+  };
+}
 function history(ctx: PF2eContext, args: Record<string, unknown>) {
   const casts = Object.values(readSpellCastRecords(ctx).entries) as SpellCastRecord[];
   const resolutions = Object.values(readSpellResolutionRecords(ctx).entries);
+  const effects = Object.values(readSpellEffectLedger(ctx).entries);
   const reconciliations = readSpellReconciliationLedger(ctx);
   const rows = [
     ...casts.map((record) => castHistoryRecord(record, Object.values(reconciliations.entries).find((entry) => entry.sourceKind === "cast" && entry.sourceId === record.castId && entry.sourceSnapshot === spellAuditSourceSnapshot("cast", record)))),
     ...resolutions.map((record) => resolutionHistoryRecord(record, Object.values(reconciliations.entries).find((entry) => entry.sourceKind === "resolution" && entry.sourceId === record.resolutionId && entry.sourceSnapshot === spellAuditSourceSnapshot("resolution", record)))),
+    ...effects.map((record) => effectHistoryRecord(record, Object.values(reconciliations.entries).find((entry) => entry.sourceKind === "effect" && entry.sourceId === record.applicationId && entry.sourceSnapshot === spellAuditSourceSnapshot("effect", record)))),
   ].filter((row) => (!args.actorUuid || row.actorUuid === args.actorUuid) &&
     (!args.kind || row.kind === args.kind) &&
     (!args.originalStatus || row.originalStatus === args.originalStatus) &&
@@ -178,6 +220,176 @@ function history(ctx: PF2eContext, args: Record<string, unknown>) {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const offset = Number(args.offset ?? 0), limit = Number(args.limit ?? 25);
   return { offset, limit, total: rows.length, truncated: offset + limit < rows.length, entries: rows.slice(offset, offset + limit) };
+}
+function nativeEffectSourceUuid(item: any): string | null {
+  return nativeCompendiumSourceUuid(item);
+}
+async function inspectEffectEvidence(record: SpellEffectRecord, ctx: PF2eContext): Promise<{ evidence: any; refs: any; recheck: () => void }> {
+  // Effect reservations belong to the original operation, but recovery is a
+  // new GM review. Bind evidence rechecks to this review's current identity;
+  // the source record and its original session remain immutable evidence.
+  const reviewIdentity = identity(ctx);
+  if (reviewIdentity.worldId !== record.worldId)
+    throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "The source effect belongs to a different world.");
+  if (![`reserved`, `uncertain`].includes(record.status))
+    throw fail("SPELL_EFFECT_EVIDENCE_MISSING", "Only an unresolved effect record can be reconciled.");
+  if (!record.outcome && record.choice.kind !== "effect")
+    throw fail("SPELL_EFFECT_EVIDENCE_MISSING", "Condition recovery requires sufficient durable native outcome facts.");
+  const cast = readSpellCastRecords(ctx).entries[record.castId];
+  const castMessage = cast?.chatMessageUuid ? messageByUuid(ctx, cast.chatMessageUuid) : null;
+  const castCard = cast && castMessage ? exactCastMessage(castMessage, cast, ctx) : null;
+  if (!cast || cast.worldId !== record.worldId || cast.status !== "confirmed" || cast.nativeConsumed !== true ||
+    cast.chatMessageUuid !== record.castMessageUuid || cast.actorUuid !== record.casterActorUuid ||
+    cast.casterTokenUuid !== record.casterTokenUuid || !castCard?.ok)
+    throw fail("SPELL_EFFECT_EVIDENCE_CAST_INVALID", "The source cast is not a current confirmed native cast with an exact actual-cast card.");
+  const casterToken = await ctx.resolve(record.casterTokenUuid);
+  const { target, actor } = await resolvePF2eTarget(ctx, record.targetTokenUuid);
+  const casterActor = casterToken?.actor;
+  const entry = await ctx.resolve(cast.entryUuid);
+  const spell = await ctx.resolve(cast.spellUuid);
+  const scene = casterToken?.parent;
+  if (!casterToken || casterToken.documentName !== "Token" || casterToken.uuid !== record.casterTokenUuid ||
+    !scene || target.documentName !== "Token" || target.uuid !== record.targetTokenUuid || target.parent !== scene ||
+    !values(ctx.game?.scenes).includes(scene) || !owns(scene.tokens, casterToken) || !owns(scene.tokens, target) ||
+    !currentActorForToken(casterActor, casterToken, ctx) || casterActor.uuid !== record.casterActorUuid ||
+    !actor || actor.uuid !== record.targetActorUuid || !currentActorForToken(actor, target, ctx) ||
+    !entry || entry.uuid !== cast.entryUuid || entry.type !== "spellcastingEntry" || entry.actor !== casterActor ||
+    !isCurrentNativeEntry(casterActor, entry) || !entriesFor(casterActor).includes(entry) ||
+    !spell || spell.uuid !== cast.spellUuid || spell.type !== "spell" || spell.actor !== casterActor ||
+    !owns(casterActor.items, spell) || entry.spells?.get?.(spell.id) !== spell || spell.system?.location?.value !== entry.id)
+    throw fail("SPELL_EFFECT_EVIDENCE_TARGET_INVALID", "The recorded caster and target tokens no longer identify the exact same-scene world Actors.");
+
+  const docFacts: any[] = [];
+  const documentRefs: any[] = [];
+  let selectedSourceDocument: any = null;
+  let selected: any, outcome: any;
+  const recordedDocumentUuids = record.outcome?.documentUuids ?? [];
+  if (record.choice.kind === "effect") {
+    const candidates = values(actor.items).filter((item) => item?.flags?.[MODULE_ID]?.spellEffectApplication?.applicationId === record.applicationId);
+    if (candidates.length !== 1) throw fail("SPELL_EFFECT_EVIDENCE_ITEM_MISSING", "The exact current target-owned spell effect cannot be identified uniquely.");
+    selected = candidates[0];
+    const marker = selected.flags?.[MODULE_ID]?.spellEffectApplication;
+    const context = selected.system?.context;
+    const packDoc = await ctx.resolve(record.choice.uuid);
+    selectedSourceDocument = packDoc;
+    const pack = packDoc?.compendium;
+    if (record.outcome && !record.outcome.documentUuids.includes(selected.uuid) || selected.documentName !== "Item" || selected.type !== "effect" ||
+      selected.parent !== actor || !owns(actor.items, selected) || nativeEffectSourceUuid(selected) !== record.choice.uuid ||
+      marker?.castId !== record.castId || marker?.castMessageUuid !== record.castMessageUuid ||
+      marker?.targetActorUuid !== record.targetActorUuid || marker?.targetTokenUuid !== record.targetTokenUuid ||
+      marker?.sourceUuid !== record.choice.uuid || marker?.reviewFingerprint !== record.reviewFingerprint ||
+      context?.origin?.actor !== record.casterActorUuid || context?.origin?.token !== record.casterTokenUuid ||
+      context?.origin?.item !== cast.spellUuid || !Array.isArray(context?.origin?.rollOptions) ||
+      canonical(context.origin.rollOptions) !== canonical(castCard.evidence.source.flags?.pf2e?.origin?.rollOptions) ||
+      context?.target?.actor !== record.targetActorUuid || context?.target?.token !== record.targetTokenUuid || context?.roll !== null ||
+      !packDoc || packDoc.type !== "effect" || !pack || pack.metadata?.system !== "pf2e" ||
+      ctx.game?.packs?.get?.(packDoc.pack) !== pack || pack.get?.(packDoc.id) !== packDoc)
+      throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "The native effect source, cast provenance, reviewed fingerprint, or target context does not match the durable outcome.");
+    const storedDocs: any[] = [];
+    for (const uuid of recordedDocumentUuids) {
+      const document = await ctx.resolve(uuid);
+      if (!document || document.documentName !== "Item" || document.parent !== actor || !owns(actor.items, document))
+        throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "A stored native grant document is no longer present on the reviewed target Actor.");
+      storedDocs.push(document);
+    }
+    documentRefs.push(...storedDocs);
+    docFacts.push(...storedDocs.map((document) => ({ uuid: document.uuid, source: messageSource(document) })));
+    if (!docFacts.some((fact) => fact.uuid === selected.uuid)) {
+      docFacts.unshift({ uuid: selected.uuid, source: messageSource(selected) });
+      documentRefs.unshift(selected);
+    }
+    outcome = record.outcome ?? { kind: "effect-created", documentUuids: [selected.uuid], observedValue: null };
+  } else {
+    if (!record.outcome || record.outcome.documentUuids.length !== 1) throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "Condition recovery requires one exact stored native condition document.");
+    selected = await ctx.resolve(record.outcome.documentUuids[0]);
+    const matches = actor.getCondition?.(record.choice.slug, { all: true });
+    const active = Array.isArray(matches) ? matches : matches ? [matches] : [];
+    const actualValue = selected?.value ?? selected?.system?.value?.value ?? null;
+    if (!selected || typeof selected.toObject !== "function" && !selected._source || selected.documentName !== "Item" || selected.type !== "condition" || selected.slug !== record.choice.slug ||
+      selected.parent !== actor || actor.items?.get?.(selected.id) !== selected || !selected.active ||
+      active.length !== 1 || active[0] !== selected || actualValue !== record.outcome.observedValue ||
+      actualValue !== record.choice.value ||
+      record.expectedOperation === "create-condition" && record.beforeConditionUuid !== null ||
+      record.expectedOperation === "increase-condition" && (!record.beforeConditionUuid || selected.uuid !== record.beforeConditionUuid ||
+        record.beforeConditionValue === null || actualValue === null || actualValue <= record.beforeConditionValue) ||
+      record.expectedOperation === "already-satisfied" && (selected.uuid !== record.beforeConditionUuid || record.outcome.kind !== "already-satisfied"))
+      throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "The current native condition identity/value does not match the stored selected operation and outcome.");
+    docFacts.push({ uuid: selected.uuid, source: messageSource(selected), value: actualValue });
+    documentRefs.push(selected);
+    outcome = record.outcome;
+  }
+  const projection = {
+    applicationId: record.applicationId, semanticKey: record.semanticKey, reviewFingerprint: record.reviewFingerprint,
+    targetActorUuid: record.targetActorUuid, targetTokenUuid: record.targetTokenUuid,
+    choice: structuredClone(record.choice), expectedOperation: record.expectedOperation,
+    beforeConditionUuid: record.beforeConditionUuid, beforeConditionValue: record.beforeConditionValue,
+    outcome: structuredClone(outcome), selectedDocumentUuid: selected.uuid,
+    nativeDocumentFacts: docFacts,
+  };
+  const original = {
+    castSnapshot: spellAuditSourceSnapshot("cast", cast), cardEvidence: canonical(castCard.evidence),
+    cardSource: canonical(messageSource(castMessage)), casterActor, casterActorSource: canonical(messageSource(casterActor)),
+    casterTokenSource: canonical(messageSource(casterToken)), targetTokenSource: canonical(messageSource(target)),
+    targetActorSource: canonical(messageSource(actor)), entry, entrySource: canonical(messageSource(entry)),
+    spell, spellSource: canonical(messageSource(spell)), selectedSource: selectedSourceDocument,
+    documentFacts: docFacts.map((fact) => ({ ...fact })),
+    documentRefs,
+  };
+  const selectedSourcePack = original.selectedSource?.compendium;
+  const selectedSourceSource = original.selectedSource ? canonical(messageSource(original.selectedSource)) : null;
+  const selectedEffectUuid = record.choice.kind === "effect" ? record.choice.uuid : null;
+  if (record.choice.kind === "effect" && (!original.selectedSource || !selectedSourcePack ||
+    ctx.game?.packs?.get?.(original.selectedSource.pack) !== selectedSourcePack || selectedSourcePack.get?.(original.selectedSource.id) !== original.selectedSource))
+    throw fail("SPELL_EFFECT_EVIDENCE_MISMATCH", "The selected native PF2e compendium source is no longer current.");
+  const refs = { cast, castMessage, casterToken, casterActor, entry, spell, target, actor, selected, sourceCastCard: castCard.evidence.source, original, selectedSourcePack };
+  const effectDocumentsChanged = () => !selectedEffectUuid || original.documentRefs.some((document: any) => {
+    const fact = original.documentFacts.find((candidate: any) => candidate.uuid === document.uuid);
+    return document.parent !== actor || actor.items?.get?.(document.id) !== document || !fact ||
+      canonical(messageSource(document)) !== canonical(fact.source);
+  }) || nativeEffectSourceUuid(selected) !== selectedEffectUuid ||
+    selected.flags?.[MODULE_ID]?.spellEffectApplication?.applicationId !== record.applicationId ||
+    selected.flags?.[MODULE_ID]?.spellEffectApplication?.reviewFingerprint !== record.reviewFingerprint ||
+    selected.flags?.[MODULE_ID]?.spellEffectApplication?.sourceUuid !== selectedEffectUuid ||
+    selected.system?.context?.origin?.actor !== record.casterActorUuid ||
+    selected.system?.context?.origin?.token !== record.casterTokenUuid ||
+    selected.system?.context?.origin?.item !== cast.spellUuid ||
+    selected.system?.context?.target?.actor !== record.targetActorUuid ||
+    selected.system?.context?.target?.token !== record.targetTokenUuid ||
+    selected.system?.context?.roll !== null || !original.selectedSource ||
+    selectedSourcePack?.get?.(original.selectedSource.id) !== original.selectedSource ||
+    ctx.game?.packs?.get?.(original.selectedSource.pack) !== selectedSourcePack ||
+    canonical(messageSource(original.selectedSource)) !== selectedSourceSource;
+  const conditionDocumentChanged = () => {
+    const matches = actor.getCondition?.(record.choice.kind === "condition" ? record.choice.slug : "", { all: true });
+    const rows = Array.isArray(matches) ? matches : matches ? [matches] : [];
+    const changed = rows.length !== 1 || rows[0] !== selected || !selected.active ||
+      actor.items?.get?.(selected.id) !== selected ||
+      (selected.value ?? selected.system?.value?.value ?? null) !== record.outcome?.observedValue ||
+      canonical(messageSource(selected)) !== canonical(original.documentFacts[0]?.source);
+    return changed;
+  };
+  const recheck = () => {
+    const currentIdentity = identity(ctx);
+    const currentCast = readSpellCastRecords(ctx).entries[record.castId];
+    const latestCastCard = exactCastMessage(castMessage, cast, ctx);
+    if (ctx.game?.world?.id !== record.worldId || !currentCast ||
+      spellAuditSourceSnapshot("cast", currentCast) !== spellAuditSourceSnapshot("cast", cast) ||
+      messageByUuid(ctx, record.castMessageUuid) !== castMessage || !values(ctx.game?.messages).includes(castMessage) ||
+      !values(ctx.game?.scenes).includes(scene) || !owns(scene.tokens, casterToken) || !owns(scene.tokens, target) ||
+      !latestCastCard?.ok || canonical(latestCastCard.evidence) !== original.cardEvidence ||
+      canonical(messageSource(castMessage)) !== original.cardSource ||
+      !currentActorForToken(casterActor, casterToken, ctx) || casterActor.uuid !== record.casterActorUuid ||
+      !currentActorForToken(actor, target, ctx) || actor.uuid !== record.targetActorUuid ||
+      canonical(messageSource(casterActor)) !== original.casterActorSource || canonical(messageSource(casterToken)) !== original.casterTokenSource ||
+      canonical(messageSource(target)) !== original.targetTokenSource || canonical(messageSource(actor)) !== original.targetActorSource ||
+      !isCurrentNativeEntry(casterActor, entry) || !entriesFor(casterActor).includes(entry) || !owns(casterActor.items, spell) ||
+      canonical(messageSource(entry)) !== original.entrySource || canonical(messageSource(spell)) !== original.spellSource ||
+      (record.choice.kind === "effect" ? effectDocumentsChanged() : conditionDocumentChanged()) ||
+      currentIdentity.worldId !== reviewIdentity.worldId || currentIdentity.userId !== reviewIdentity.userId ||
+      currentIdentity.sessionId !== reviewIdentity.sessionId)
+      throw fail("SPELL_RECONCILIATION_STALE", "The reviewed native spell-effect evidence changed.");
+  };
+  return { evidence: projection, refs, recheck };
 }
 function prune(now = Date.now()) { for (const [key, value] of intents) if (value.expiresAt <= now) intents.delete(key); }
 function sameIdentity(intent: ReconciliationIntent, ctx: PF2eContext) {
@@ -188,7 +400,7 @@ function sameIdentity(intent: ReconciliationIntent, ctx: PF2eContext) {
 }
 
 async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eContext, createIntent = true, includeRecheck = false) {
-  const kind = args.kind as "cast" | "resolution", sourceId = String(args.sourceId ?? "");
+  const kind = args.kind as "cast" | "resolution" | "effect", sourceId = String(args.sourceId ?? "");
   if (!bounded(sourceId, 128)) throw fail("INVALID_INPUT", "A bounded spell audit sourceId is required.");
   const identityNow = identity(ctx);
   const record = sourceRecord(ctx, kind, sourceId);
@@ -204,6 +416,7 @@ async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eCon
   let rollType: "check" | "damage" | null = null, rollTotal: number | null = null;
   const reasons: string[] = [];
   let evidence: any = null;
+  let effectEvidence: Record<string, any> | null = null;
   let evidenceRecheck: (() => void) | undefined;
   let initialResourceRecheck: (() => void) | undefined;
   if (kind === "cast") {
@@ -265,7 +478,7 @@ async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eCon
         };
       }
     }
-  } else {
+  } else if (kind === "resolution") {
     const resolution = record as SpellResolutionRecord;
     let sourceCast: SpellCastRecord | undefined;
     try { sourceCast = readSpellCastRecords(ctx).entries[resolution.castId]; }
@@ -349,6 +562,16 @@ async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eCon
           throw fail("SPELL_RECONCILIATION_STALE", "The reviewed native resolution, roll, or source cast changed.");
       };
     }
+  } else {
+    try {
+      const inspected = await inspectEffectEvidence(record as SpellEffectRecord, ctx);
+      effectEvidence = inspected.evidence;
+      evidence = inspected.evidence;
+      decision = "confirmed-observed";
+      evidenceRecheck = inspected.recheck;
+    } catch (error: any) {
+      reasons.push(error?.message ?? "The current native spell-effect evidence could not be validated.");
+    }
   }
   if (!decision) return {
     supported: false, sourceKind: kind, sourceId, originalStatus: (record as any).status,
@@ -376,7 +599,7 @@ async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eCon
     if (!currentResourceEqual(refreshedResource.resource, after ?? before!) ||
       (messageUuid && (!latestCard?.ok || canonical(latestCard.evidence) !== canonical(evidence))))
       throw fail("SPELL_RECONCILIATION_STALE", "The native cast evidence changed while its review fingerprint was computed.");
-  } else if (messageUuid) {
+  } else if (kind === "resolution" && messageUuid) {
     const latestMessage = messageByUuid(ctx, messageUuid);
     const refreshedSource = messageSource(latestMessage);
     if (!refreshedSource || canonical(refreshedSource) !== canonical(evidence.source))
@@ -395,14 +618,28 @@ async function inspectReconciliation(args: Record<string, unknown>, ctx: PF2eCon
   const expiresAt = Date.now() + TTL;
   const intent: ReconciliationIntent = {
     id, token, ...identityNow, expiresAt, sourceKind: kind, sourceId, sourceSnapshot: snapshot,
-    sourceFingerprint: immutableFingerprint, actorUuid: kind === "cast" ? (record as SpellCastRecord).actorUuid : (record as SpellResolutionRecord).casterActorUuid,
+    sourceFingerprint: immutableFingerprint, actorUuid: kind === "cast" ? (record as SpellCastRecord).actorUuid : kind === "resolution" ? (record as SpellResolutionRecord).casterActorUuid : (record as SpellEffectRecord).casterActorUuid,
     decision, evidenceMessageUuid: messageUuid, resourceBefore: before, resourceAfter: after,
-    rollType, rollTotal, evidenceFingerprint: fingerprint,
+    rollType, rollTotal, evidenceFingerprint: fingerprint, effectEvidence,
   };
   intents.set(id, intent);
   return { supported: true, sourceKind: kind, sourceId, originalStatus: (record as any).status,
     decision, reconciliationId: id, reviewToken: token, expiresAt: new Date(expiresAt).toISOString(),
     evidenceMessageUuid: messageUuid, resourceBefore: before, resourceAfter: after, rollType, rollTotal,
+    ...(effectEvidence ? { effectEvidence: {
+      applicationId: effectEvidence.applicationId,
+      targetActorUuid: effectEvidence.targetActorUuid,
+      targetTokenUuid: effectEvidence.targetTokenUuid,
+      choice: structuredClone(effectEvidence.choice),
+      expectedOperation: effectEvidence.expectedOperation,
+      beforeConditionUuid: effectEvidence.beforeConditionUuid,
+      beforeConditionValue: effectEvidence.beforeConditionValue,
+      outcome: {
+        kind: effectEvidence.outcome.kind,
+        documentUuids: [...effectEvidence.outcome.documentUuids].slice(0, 30),
+        observedValue: effectEvidence.outcome.observedValue,
+      },
+    } } : {}),
     note: "Execution rechecks the source and native evidence before one append-only audit write." };
 }
 
@@ -420,6 +657,18 @@ async function executeReconciliation(args: Record<string, unknown>, ctx: PF2eCon
     actorUuid: intent.actorUuid, decision: intent.decision, evidenceVersion: 1,
     evidenceMessageUuid: intent.evidenceMessageUuid, resourceBefore: intent.resourceBefore,
     resourceAfter: intent.resourceAfter, rollType: intent.rollType, rollTotal: intent.rollTotal,
+    ...(intent.effectEvidence ? {
+      targetActorUuid: intent.effectEvidence.targetActorUuid,
+      targetTokenUuid: intent.effectEvidence.targetTokenUuid,
+      semanticKey: intent.effectEvidence.semanticKey,
+      choice: intent.effectEvidence.choice,
+      expectedOperation: intent.effectEvidence.expectedOperation,
+      beforeConditionUuid: intent.effectEvidence.beforeConditionUuid,
+      beforeConditionValue: intent.effectEvidence.beforeConditionValue,
+      outcomeKind: intent.effectEvidence.outcome.kind,
+      observedValue: intent.effectEvidence.outcome.observedValue,
+      documentUuids: intent.effectEvidence.outcome.documentUuids,
+    } : {}),
   }, async () => {
     sameIdentity(intent, ctx);
     const current = sourceRecord(ctx, intent.sourceKind, intent.sourceId);

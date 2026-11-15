@@ -158,16 +158,44 @@ export const toolSchemas = {
     }),
   pf2e_inspect_spell_history: z.object({
     actorUuid: z.string().min(1).max(512).optional(),
-    kind: z.enum(["cast", "resolution"]).optional(),
+    kind: z.enum(["cast", "resolution", "effect"]).optional(),
     originalStatus: z.enum(["reserved", "confirmed", "uncertain"]).optional(),
     effectiveStatus: z.enum(["reserved", "confirmed", "uncertain", "reconciled"]).optional(),
     offset: z.number().int().min(0).default(0),
     limit: z.number().int().min(1).max(50).default(25),
   }).strict(),
   pf2e_inspect_spell_reconciliation: z.object({
-    kind: z.enum(["cast", "resolution"]),
+    kind: z.enum(["cast", "resolution", "effect"]),
     sourceId: z.string().min(1).max(128),
     candidateMessageUuid: z.string().min(1).max(512).optional(),
+  }).strict(),
+  pf2e_inspect_spell_effect: z.object({
+    castMessageUuid: z.string().min(1).max(512),
+    casterTokenUuid: z.string().min(1).max(512),
+    targetTokenUuid: z.string().min(1).max(512),
+    choice: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("effect"), uuid: z.string().startsWith("Compendium.").max(512) }).strict(),
+      z.object({ kind: z.literal("condition"), slug: z.string().regex(/^[a-z][a-z0-9-]*$/).max(80), value: z.number().int().min(1).max(100).nullable() }).strict(),
+    ]),
+  }).strict(),
+  pf2e_inspect_spell_durations: z.object({
+    targetUuid: z.string().min(1).max(512),
+    offset: z.number().int().min(0).default(0),
+    limit: z.number().int().min(1).max(50).default(25),
+    sustainedOnly: z.boolean().default(false),
+    includeExpired: z.boolean().default(false),
+  }).strict(),
+  pf2e_apply_spell_effect: z.object({
+    castMessageUuid: z.string().min(1).max(512),
+    casterTokenUuid: z.string().min(1).max(512),
+    targetTokenUuid: z.string().min(1).max(512),
+    choice: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("effect"), uuid: z.string().startsWith("Compendium.").max(512) }).strict(),
+      z.object({ kind: z.literal("condition"), slug: z.string().regex(/^[a-z][a-z0-9-]*$/).max(80), value: z.number().int().min(1).max(100).nullable() }).strict(),
+    ]),
+    applicationId: z.string().min(1).max(128),
+    reviewToken: z.string().min(1).max(128),
+    expectedCombat,
   }).strict(),
   pf2e_reconcile_spell_audit: z.object({
     reconciliationId: z.string().min(1).max(128),
@@ -474,6 +502,7 @@ export const toolSchemas = {
 export type ToolName = keyof typeof toolSchemas;
 export const toolNames = Object.keys(toolSchemas) as ToolName[];
 export const writeTools = new Set<ToolName>([
+  "pf2e_apply_spell_effect",
   "pf2e_apply_damage",
   "pf2e_reconcile_spell_audit",
   "pf2e_cast_spell",
@@ -511,6 +540,7 @@ export const writeTools = new Set<ToolName>([
   "remove_combatants",
 ]);
 export const destructiveTools = new Set<ToolName>([
+  "pf2e_apply_spell_effect",
   "pf2e_apply_damage",
   "pf2e_cast_spell",
   "pf2e_roll_initiative",

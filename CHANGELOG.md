@@ -2,6 +2,12 @@
 
 Release notes are maintained in versioned files under `docs/`.
 
+## 0.13.0
+
+- Add GM-selected native PF2e effect and condition outcomes, bounded duration and sustain inspection, and effect evidence recovery; MCP discovery now contains 66 tools.
+- Keep effect application in the existing GM approval path. Native hooks remain authoritative; the selected effect is not inferred from spell text, and uncertain outcomes require review before any new action.
+- See [release notes](docs/release-v0.13.0.md), [spell effects guide](docs/spell-effects.md), and [validation record](docs/validation-v0.13.0.md).
+
 ## 0.12.0
 
 - Add three PF2e spell history and evidence-bound reconciliation tools, bringing MCP discovery to 63 tools.

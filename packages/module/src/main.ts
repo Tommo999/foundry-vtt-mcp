@@ -12,6 +12,7 @@ import { handlePF2eSpellcasting } from "./pf2e-spellcasting";
 import { handlePF2eSpellCast } from "./pf2e-spell-cast";
 import { handlePF2eSpellResolution } from "./pf2e-spell-resolution";
 import { handlePF2eSpellAudit } from "./pf2e-spell-audit";
+import { handlePF2eSpellEffect } from "./pf2e-spell-effect";
 import { handlePF2eStrikes } from "./pf2e-strikes";
 import { handlePF2eCombatContext } from "./pf2e-combat-context";
 import { handlePF2eInspectDamageApplication } from "./pf2e-damage-context";
@@ -62,6 +63,11 @@ type Runtime = {
   seen: Set<string>;
   history: Array<{ id: string; tool: string; outcome: string; at: string }>;
   spellHistoryEntries: any[];
+  spellDurationEntries: any[];
+  spellDurationTargetUuid: string;
+  spellDurationError?: string;
+  spellDurationTotal: number;
+  spellDurationRequestGeneration: number;
   spellAuditPreviews: Map<string, any>;
   spellAuditExpanded: Set<string>;
   spellAuditSessionKey?: string;
@@ -77,6 +83,10 @@ const runtime: Runtime = {
   seen: new Set(),
   history: [],
   spellHistoryEntries: [],
+  spellDurationEntries: [],
+  spellDurationTargetUuid: "",
+  spellDurationTotal: 0,
+  spellDurationRequestGeneration: 0,
   spellAuditPreviews: new Map(),
   spellAuditExpanded: new Set(),
   spellAuditBusy: false,
@@ -562,6 +572,16 @@ async function execute(
       case "pf2e_inspect_spell_reconciliation":
       case "pf2e_reconcile_spell_audit": {
         const data = await handlePF2eSpellAudit(
+          tool,
+          args,
+          pf2eContext(session, socket!, authorization),
+        );
+        return { ok: true, data };
+      }
+      case "pf2e_inspect_spell_effect":
+      case "pf2e_apply_spell_effect":
+      case "pf2e_inspect_spell_durations": {
+        const data = await handlePF2eSpellEffect(
           tool,
           args,
           pf2eContext(session, socket!, authorization),
@@ -1290,6 +1310,11 @@ function respond(
 }
 function clearSpellAuditState() {
   runtime.spellHistoryEntries = [];
+  runtime.spellDurationEntries = [];
+  runtime.spellDurationTargetUuid = "";
+  runtime.spellDurationError = undefined;
+  runtime.spellDurationTotal = 0;
+  runtime.spellDurationRequestGeneration++;
   runtime.spellAuditPreviews.clear();
   runtime.spellAuditExpanded.clear();
   runtime.spellAuditSessionKey = undefined;
@@ -1379,7 +1404,46 @@ function refreshSpellHistory() {
     runtime.app?.render(true);
   });
 }
-function previewSpellReconciliation(kind: "cast" | "resolution", sourceId: string) {
+function refreshSpellDurations(targetUuid = runtime.spellDurationTargetUuid) {
+  if (!ensureSpellAuditSession()) {
+    runtime.spellDurationError = "Connect and pair as the current GM to inspect target durations.";
+    runtime.app?.render(true);
+    return;
+  }
+  const explicitTargetUuid = targetUuid.trim();
+  runtime.spellDurationTargetUuid = explicitTargetUuid;
+  if (!explicitTargetUuid) {
+    runtime.spellDurationEntries = [];
+    runtime.spellDurationError = "Enter an Actor UUID or scene Token UUID.";
+    runtime.app?.render(true);
+    return;
+  }
+  runtime.spellAuditBusy = true;
+  runtime.spellDurationError = undefined;
+  const sessionKey = runtime.spellAuditSessionKey;
+  const requestGeneration = ++runtime.spellDurationRequestGeneration;
+  runtime.app?.render(true);
+  submitLocalTool("pf2e_inspect_spell_durations", { targetUuid: explicitTargetUuid, offset: 0, limit: 10 }, (result) => {
+    if (!spellAuditSessionStillCurrent(sessionKey)) { runtime.app?.render(true); return; }
+    if (runtime.spellDurationRequestGeneration !== requestGeneration || runtime.spellDurationTargetUuid !== explicitTargetUuid) {
+      runtime.spellAuditBusy = false;
+      runtime.app?.render(true);
+      return;
+    }
+    runtime.spellAuditBusy = false;
+    if (!result.ok) {
+      runtime.spellDurationEntries = [];
+      runtime.spellDurationError = result.error.message;
+    } else {
+      const data = result.data as any;
+      runtime.spellDurationEntries = Array.isArray(data?.items) ? data.items.slice(0, 10) : [];
+      runtime.spellDurationTotal = Number.isSafeInteger(data?.total) ? data.total : runtime.spellDurationEntries.length;
+      runtime.spellDurationError = Array.isArray(data?.warnings) && data.warnings.length ? data.warnings.join(" ") : undefined;
+    }
+    runtime.app?.render(true);
+  });
+}
+function previewSpellReconciliation(kind: "cast" | "resolution" | "effect", sourceId: string) {
   if (!ensureSpellAuditSession()) return;
   const key = `${kind}\0${sourceId}`;
   runtime.spellAuditBusy = true;
@@ -1394,7 +1458,7 @@ function previewSpellReconciliation(kind: "cast" | "resolution", sourceId: strin
     runtime.app?.render(true);
   });
 }
-function reconcileSpellAudit(kind: "cast" | "resolution", sourceId: string) {
+function reconcileSpellAudit(kind: "cast" | "resolution" | "effect", sourceId: string) {
   const key = `${kind}\0${sourceId}`;
   const preview = runtime.spellAuditPreviews.get(key);
   if (!preview?.supported || !preview.reconciliationId || !preview.reviewToken) {
@@ -1653,7 +1717,7 @@ class BridgeApp extends ApplicationV2 {
     const guidance = diagnostics.upgradeGuidance.steps.length
       ? `<aside class="upgrade-notice"><strong>Version update recommended or unverified</strong><ol>${diagnostics.upgradeGuidance.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></aside>`
       : "";
-    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><h3>Runtime versions</h3><ul>${versions}</ul>${guidance}<label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><section class="spell-audit"><h3>Spell audit</h3><p class="hint">Read-only history and evidence preview. Reconciliation uses the same write approval settings as MCP tools.</p><div class="actions"><button data-action="spell-refresh" ${!auditReady || runtime.spellAuditBusy ? "disabled" : ""}>${runtime.spellAuditBusy ? "Working…" : "Refresh (10)"}</button></div><p class="spell-audit-status">${escapeHtml(runtime.spellAuditError ?? (auditReady ? "" : "Connect and pair as the current GM to inspect spell history."))}</p><div class="spell-audit-rows"></div></section><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
+    root.innerHTML = `<p class="status">Status: <strong>${status}</strong>${runtime.sessionId ? " · paired" : ""}</p><h3>Runtime versions</h3><ul>${versions}</ul>${guidance}<label>Companion secure WebSocket URL<input name="endpoint" type="url" value="${escapeHtml(runtime.endpoint)}" placeholder="wss://127.0.0.1:31415/bridge"></label><label>Pairing token<input name="token" type="password" autocomplete="off" value="${escapeHtml(runtime.token)}"></label><div class="actions"><button data-action="connect">Connect</button><button data-action="disconnect">Disconnect</button></div><label class="check"><input type="checkbox" name="auto" ${runtime.autoWrites ? "checked" : ""} ${runtime.socket?.readyState === WebSocket.OPEN ? "" : "disabled"}> Automatically allow writes for this connection</label><p class="hint">GM only. Reads run immediately. Reconnecting always returns to approval mode.</p><section class="spell-audit"><h3>Spell audit</h3><p class="hint">Read-only history and evidence preview. Reconciliation uses the same write approval settings as MCP tools.</p><div class="actions"><button data-action="spell-refresh" ${!auditReady || runtime.spellAuditBusy ? "disabled" : ""}>${runtime.spellAuditBusy ? "Working…" : "Refresh (10)"}</button></div><p class="spell-audit-status">${escapeHtml(runtime.spellAuditError ?? (auditReady ? "" : "Connect and pair as the current GM to inspect spell history."))}</p><div class="spell-audit-rows"></div><section class="spell-durations"><h4>Native durations and sustain reminders</h4><p class="hint">Enter an Actor UUID or scene Token UUID. Values are read-only native observations; sustain labels are advisory.</p><label>Explicit target UUID<input name="spell-duration-target" type="text" value="${escapeHtml(runtime.spellDurationTargetUuid)}" placeholder="Actor.… or Scene.…Token.…"></label><div class="actions"><button data-action="spell-duration-refresh" ${!auditReady || runtime.spellAuditBusy ? "disabled" : ""}>Refresh durations (10)</button></div><p class="spell-duration-status">${escapeHtml(runtime.spellDurationError ?? (runtime.spellDurationEntries.length ? `${runtime.spellDurationTotal} native rows; showing ${runtime.spellDurationEntries.length}.` : "Select an explicit Actor or token to inspect."))}</p><div class="spell-duration-rows"></div></section></section><h3>Pending write approvals (${runtime.queue.size})</h3><div class="requests"></div><h3>Recent tool outcomes</h3><ol class="history"></ol>`;
     const list = root.querySelector(".requests")!;
     for (const [id, pending] of runtime.queue) {
       const card = document.createElement("article");
@@ -1667,7 +1731,11 @@ class BridgeApp extends ApplicationV2 {
         const encoded = String(pending.request.args.dataBase64 ?? "");
         approvalArgs.byteSize = Math.floor((encoded.length * 3) / 4);
       }
-      if (pending.request.tool === "pf2e_reconcile_spell_audit") delete approvalArgs.reviewToken;
+      if (pending.request.tool === "pf2e_reconcile_spell_audit" || pending.request.tool === "pf2e_apply_spell_effect") delete approvalArgs.reviewToken;
+      if (pending.request.tool === "pf2e_reconcile_spell_audit") {
+        const review = [...runtime.spellAuditPreviews.values()].find((item) => item?.reconciliationId === pending.request.args.reconciliationId);
+        if (review?.effectEvidence) approvalArgs.reviewedEffectEvidence = review.effectEvidence;
+      }
       detail.textContent = JSON.stringify(approvalArgs, null, 2);
       const approve = document.createElement("button");
       approve.textContent = "Approve";
@@ -1716,6 +1784,10 @@ class BridgeApp extends ApplicationV2 {
         const detailsList = document.createElement("dl");
         const detailsRows: Array<[string, unknown]> = [
           ["Actor", rowData.actorUuid], ["Spell", rowData.spellUuid], ["Targets", rowData.targetTokenUuids],
+          ["Target Actor", rowData.targetActorUuid], ["Target token", rowData.targetTokenUuid],
+          ["Cast card", rowData.castMessageUuid], ["Application", rowData.kind === "effect" ? rowData.id : null],
+          ["Choice", rowData.choice], ["Expected operation", rowData.expectedOperation],
+          ["Original outcome", rowData.outcome], ["Evidence documents", rowData.evidenceDocumentUuids],
           ["Reconciliation", rowData.reconciliationId], ["Decision", rowData.reconciliationDecision],
           ["Evidence message", rowData.evidenceMessageUuid ?? rowData.messageUuid ?? rowData.chatMessageUuid],
           ["Evidence resources", { before: rowData.evidenceResourceBefore, after: rowData.evidenceResourceAfter }],
@@ -1735,6 +1807,13 @@ class BridgeApp extends ApplicationV2 {
           openEvidence.dataset.auditEvidenceUuid = evidenceUuid;
           row.append(openEvidence);
         }
+        for (const uuid of [rowData.castMessageUuid, rowData.choice?.uuid, ...(rowData.outcome?.documentUuids ?? []), ...(rowData.evidenceDocumentUuids ?? [])]) {
+          if (typeof uuid !== "string" || uuid === evidenceUuid) continue;
+          const openDocument = document.createElement("button");
+          openDocument.textContent = uuid === rowData.choice?.uuid ? "Open selected source" : "Open linked document";
+          openDocument.dataset.auditDocumentUuid = uuid;
+          row.append(openDocument);
+        }
       }
       const previewData = runtime.spellAuditPreviews.get(key);
       if (previewData) {
@@ -1742,7 +1821,7 @@ class BridgeApp extends ApplicationV2 {
         previewBlock.className = "spell-audit-preview";
         const summary = document.createElement("p");
         summary.textContent = previewData.supported
-          ? `Decision: ${previewData.decision} · Evidence: ${previewData.evidenceMessageUuid ?? "native resource facts"} · Expires: ${previewData.expiresAt ?? "after this preview"}`
+          ? `Decision: ${previewData.decision} · Evidence: ${previewData.evidenceMessageUuid ?? previewData.effectEvidence?.outcome?.documentUuids?.join(", ") ?? "native resource facts"} · Expires: ${previewData.expiresAt ?? "after this preview"}`
           : `No reconciliation available: ${(previewData.reasons ?? []).join(" ")}`;
         previewBlock.append(summary);
         if (typeof previewData.evidenceMessageUuid === "string") {
@@ -1751,9 +1830,16 @@ class BridgeApp extends ApplicationV2 {
           openEvidence.dataset.auditEvidenceUuid = previewData.evidenceMessageUuid;
           previewBlock.append(openEvidence);
         }
+        for (const uuid of previewData.effectEvidence?.outcome?.documentUuids ?? []) {
+          if (typeof uuid !== "string") continue;
+          const openDocument = document.createElement("button");
+          openDocument.textContent = "Open observed native outcome";
+          openDocument.dataset.auditDocumentUuid = uuid;
+          previewBlock.append(openDocument);
+        }
         if (previewData.supported) {
           const evidence = document.createElement("pre");
-          evidence.textContent = JSON.stringify({ resourceBefore: previewData.resourceBefore, resourceAfter: previewData.resourceAfter, rollType: previewData.rollType, rollTotal: previewData.rollTotal }, null, 2);
+          evidence.textContent = JSON.stringify(previewData.effectEvidence ?? { resourceBefore: previewData.resourceBefore, resourceAfter: previewData.resourceAfter, rollType: previewData.rollType, rollTotal: previewData.rollTotal }, null, 2);
           previewBlock.append(evidence);
           const reconcile = document.createElement("button");
           reconcile.textContent = "Reconcile audit";
@@ -1767,10 +1853,74 @@ class BridgeApp extends ApplicationV2 {
       }
       auditRows.append(row);
     }
+    const durationRows = root.querySelector(".spell-duration-rows")!;
+    for (const item of runtime.spellDurationEntries.slice(0, 10)) {
+      const row = document.createElement("article");
+      row.className = "spell-duration-row";
+      const title = document.createElement("strong");
+      title.textContent = `${item.name ?? item.slug ?? item.uuid ?? "Unnamed native item"} · ${item.kind}`;
+      const detail = document.createElement("p");
+      const duration = item.duration;
+      const length = duration?.unit === "unlimited" ? "Unlimited" :
+        duration?.value == null || duration?.unit == null ? "Unknown duration" : `${duration.value} ${duration.unit}`;
+      const remaining = item.remaining == null ? "unknown" : String(item.remaining);
+      const expired = item.isExpired == null ? "unknown" : item.isExpired ? "yes" : "no";
+      detail.textContent = `${length} · remaining ${remaining} · expired ${expired} · start ${item.start ?? "unknown"}${item.startInitiative == null ? "" : ` (initiative ${item.startInitiative})`}`;
+      row.append(title, detail);
+      if (duration?.sustained === true) {
+        const advisory = document.createElement("p");
+        advisory.textContent = "Advisory: sustained effect; this view does not spend an action or extend duration.";
+        row.append(advisory);
+      }
+      const links = item.auditLink;
+      if (links?.applicationId) {
+        const auditLink = document.createElement("p");
+        auditLink.textContent = `Bridge application ${links.applicationId} · ${links.effectiveStatus ?? "status unknown"}`;
+        row.append(auditLink);
+      } else if (item.bridgeApplicationId) {
+        const auditLink = document.createElement("p");
+        auditLink.textContent = `Bridge application ${item.bridgeApplicationId} · status unavailable`;
+        row.append(auditLink);
+      } else {
+        const unknown = document.createElement("p");
+        unknown.textContent = "Bridge application link unknown.";
+        row.append(unknown);
+      }
+      if (typeof item.uuid === "string") {
+        const openItem = document.createElement("button");
+        openItem.textContent = "Open native item";
+        openItem.dataset.auditDocumentUuid = item.uuid;
+        row.append(openItem);
+      }
+      if (typeof item.sourceUuid === "string") {
+        const openSource = document.createElement("button");
+        openSource.textContent = "Open native source";
+        openSource.dataset.auditDocumentUuid = item.sourceUuid;
+        row.append(openSource);
+      }
+      const castMessageUuid = links?.castMessageUuid ?? item.bridgeCastMessageUuid;
+      if (typeof castMessageUuid === "string") {
+        const openCast = document.createElement("button");
+        openCast.textContent = "Open cast card";
+        openCast.dataset.auditEvidenceUuid = castMessageUuid;
+        row.append(openCast);
+      }
+      durationRows.append(row);
+    }
     root.addEventListener("input", (e) => {
       const target = e.target as HTMLInputElement;
       if (target.name === "endpoint") runtime.endpoint = target.value;
       if (target.name === "token") runtime.token = target.value;
+      if (target.name === "spell-duration-target" && target.value !== runtime.spellDurationTargetUuid) {
+        runtime.spellDurationTargetUuid = target.value;
+        runtime.spellDurationRequestGeneration++;
+        runtime.spellDurationEntries = [];
+        runtime.spellDurationTotal = 0;
+        runtime.spellDurationError = "Target changed; refresh to read its durations.";
+        root.querySelector(".spell-duration-rows")?.replaceChildren();
+        const durationStatus = root.querySelector(".spell-duration-status");
+        if (durationStatus) durationStatus.textContent = runtime.spellDurationError;
+      }
       if (target.name === "auto") {
         runtime.autoWrites = target.checked;
       }
@@ -1791,6 +1941,7 @@ class BridgeApp extends ApplicationV2 {
       }
       if (button.dataset.action === "disconnect") disconnect();
       if (button.dataset.action === "spell-refresh") refreshSpellHistory();
+      if (button.dataset.action === "spell-duration-refresh") refreshSpellDurations((root.querySelector('[name="spell-duration-target"]') as HTMLInputElement)?.value ?? "");
       if (button.dataset.auditDetails) {
         const key = `${button.dataset.auditKind}\0${button.dataset.auditSourceId}`;
         if (runtime.spellAuditExpanded.has(key)) runtime.spellAuditExpanded.delete(key);
@@ -1799,11 +1950,11 @@ class BridgeApp extends ApplicationV2 {
       }
       if (button.dataset.auditPreview) {
         const kind = button.dataset.auditKind, sourceId = button.dataset.auditSourceId;
-        if ((kind === "cast" || kind === "resolution") && sourceId) previewSpellReconciliation(kind, sourceId);
+        if ((kind === "cast" || kind === "resolution" || kind === "effect") && sourceId) previewSpellReconciliation(kind, sourceId);
       }
       if (button.dataset.auditReconcile) {
         const kind = button.dataset.auditKind, sourceId = button.dataset.auditSourceId;
-        if ((kind === "cast" || kind === "resolution") && sourceId) reconcileSpellAudit(kind, sourceId);
+        if ((kind === "cast" || kind === "resolution" || kind === "effect") && sourceId) reconcileSpellAudit(kind, sourceId);
       }
       if (button.dataset.auditEvidenceUuid) {
         const uuid = button.dataset.auditEvidenceUuid;
@@ -1813,6 +1964,18 @@ class BridgeApp extends ApplicationV2 {
           if (typeof chat?.scrollToMessage === "function") chat.scrollToMessage(message.id);
           else notify(`Evidence message: ${uuid}`, "info");
         }).catch(() => notify("That evidence message is no longer available in this world.", "warn"));
+      }
+      if (button.dataset.auditDocumentUuid) {
+        const uuid = button.dataset.auditDocumentUuid;
+        void Promise.resolve(g.fromUuid?.(uuid)).then((document: any) => {
+          if (!document) { notify("That linked document is no longer available in this world.", "warn"); return; }
+          if (document.documentName === "ChatMessage") {
+            const chat = g.ui?.chat;
+            if (typeof chat?.scrollToMessage === "function") chat.scrollToMessage(document.id);
+            else notify(`Linked document: ${uuid}`, "info");
+          } else if (typeof document.sheet?.render === "function") document.sheet.render(true);
+          else notify(`Linked document: ${uuid}`, "info");
+        }).catch(() => notify("That linked document is no longer available in this world.", "warn"));
       }
       if (button.dataset.approve) void this.approve(button.dataset.approve);
       if (button.dataset.deny) this.deny(button.dataset.deny);
@@ -1937,6 +2100,14 @@ g.Hooks.once("ready", () => {
     default: { version: 1, entries: {} },
     restricted: true,
   });
+  gameRef().settings.register(MODULE_ID, "spellEffectOutcomes", {
+    name: "Spell effect outcome records",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { version: 1, entries: {} },
+    restricted: true,
+  });
   gameRef().settings.registerMenu(MODULE_ID, "openBridge", {
     name: "Open MCP Bridge",
     label: "Open Bridge",
@@ -1965,5 +2136,6 @@ export const __test = {
   refreshSpellHistory,
   previewSpellReconciliation,
   reconcileSpellAudit,
+  refreshSpellDurations,
   BridgeApp,
 };

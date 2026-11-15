@@ -85,6 +85,9 @@ describe("shared MCP tool contracts", () => {
       "pf2e_roll_spell_damage",
       "pf2e_inspect_spell_history",
       "pf2e_inspect_spell_reconciliation",
+      "pf2e_inspect_spell_effect",
+      "pf2e_inspect_spell_durations",
+      "pf2e_apply_spell_effect",
       "pf2e_reconcile_spell_audit",
       "pf2e_roll_initiative",
       "start_encounter",
@@ -134,7 +137,7 @@ describe("shared MCP tool contracts", () => {
       "create_embedded",
       "import_compendium",
     ]);
-    expect(toolNames).toHaveLength(63);
+    expect(toolNames).toHaveLength(66);
   });
   it("classifies spell-resolution tools and constrains attack numbers", () => {
     const selection = {
@@ -166,6 +169,15 @@ describe("shared MCP tool contracts", () => {
       expect(destructiveTools.has(tool)).toBe(false);
     }
     expect(writeTools.has("pf2e_inspect_spell_resolution")).toBe(false);
+    const effectApply = {
+      castMessageUuid: "ChatMessage.cast", casterTokenUuid: "Scene.s.Token.caster",
+      targetTokenUuid: "Scene.s.Token.target", choice: { kind: "condition", slug: "frightened", value: 2 },
+      applicationId: "spell-effect-application-a", reviewToken: "spell-effect-review-a", expectedCombat: null,
+    };
+    expect(parseTool("pf2e_apply_spell_effect", effectApply).tool).toBe("pf2e_apply_spell_effect");
+    expect(writeTools.has("pf2e_apply_spell_effect")).toBe(true);
+    expect(destructiveTools.has("pf2e_apply_spell_effect")).toBe(true);
+    expect(() => parseTool("pf2e_apply_spell_effect", { ...effectApply, value: 2 })).toThrow();
     const execution = {
       ...selection,
       resolutionId: "spell-resolution-a",

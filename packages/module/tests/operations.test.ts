@@ -256,6 +256,27 @@ describe("Foundry write operations", () => {
     vi.stubGlobal("document", priorDocument);
   });
 
+  it("keeps a native spell-effect apply request in the existing queue and redacts its review token", () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    const dom = new JSDOM("<!doctype html><html><body></body></html>");
+    const priorDocument = (globalThis as any).document;
+    vi.stubGlobal("document", dom.window.document);
+    api.__test.submitLocalTool("pf2e_apply_spell_effect", {
+      castMessageUuid: "ChatMessage.cast", casterTokenUuid: "Scene.s.Token.caster", targetTokenUuid: "Scene.s.Token.target",
+      choice: { kind: "effect", uuid: "Compendium.pf2e.spell-effects.Item.effect" }, applicationId: "application-review",
+      reviewToken: "private-apply-review", expectedCombat: null,
+    }, vi.fn());
+    expect(api.__test.runtime.queue.size).toBe(1);
+    const app = new api.__test.BridgeApp();
+    const root = app._renderHTML();
+    expect(root.querySelector(".request pre")?.textContent).toContain("application-review");
+    expect(root.querySelector(".request pre")?.textContent).not.toContain("private-apply-review");
+    const id = api.__test.runtime.queue.keys().next().value;
+    app.deny(id);
+    dom.window.close();
+    vi.stubGlobal("document", priorDocument);
+  });
+
   it("uses current automatic-write authorization for local reconciliation requests", async () => {
     game.system = { id: "pf2e", version: "8.7.0" };
     game.settings = { get: vi.fn(() => undefined) };
@@ -270,6 +291,46 @@ describe("Foundry write operations", () => {
     expect(socket.send).not.toHaveBeenCalled();
   });
 
+  it("renders effect audit evidence and routes its reconciliation through the existing approval queue", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => undefined) };
+    const dom = new JSDOM("<!doctype html><html><body></body></html>");
+    const priorDocument = (globalThis as any).document;
+    vi.stubGlobal("document", dom.window.document);
+    api.__test.runtime.spellHistoryEntries = [{ kind: "effect", id: "application-1", originalStatus: "uncertain", effectiveStatus: "uncertain",
+      actorUuid: "Actor.caster", targetActorUuid: "Actor.target", targetTokenUuid: "Scene.s.Token.t", castMessageUuid: "ChatMessage.cast",
+      choice: { kind: "condition", slug: "frightened", value: 2 }, expectedOperation: "create-condition", outcome: null }];
+    api.__test.runtime.spellAuditPreviews.set("effect\0application-1", {
+      supported: true, reconciliationId: "reconciliation-1", reviewToken: "private-review-token",
+      effectEvidence: { applicationId: "application-1", targetActorUuid: "Actor.target", outcome: { kind: "condition-created", documentUuids: ["Actor.target.Item.frightened"], observedValue: 2 } },
+    });
+    api.__test.runtime.spellDurationTargetUuid = "Actor.target";
+    api.__test.runtime.spellDurationTotal = 1;
+    api.__test.runtime.spellDurationEntries = [{ name: "<script>unsafe</script>", kind: "effect", uuid: "Actor.target.Item.effect",
+      duration: { unit: "unlimited", value: -1, sustained: true }, remaining: null, isExpired: null, start: null,
+      auditLink: { applicationId: "application-1", castMessageUuid: "ChatMessage.cast", effectiveStatus: "uncertain" } }];
+    const app = new api.__test.BridgeApp();
+    const root = app._renderHTML();
+    expect(root.querySelector('[data-audit-preview][data-audit-kind="effect"]')).not.toBeNull();
+    expect(root.querySelector('[name="spell-duration-target"]')?.getAttribute("value")).toBe("Actor.target");
+    expect(root.querySelector(".spell-duration-row strong")?.textContent).toContain("<script>unsafe</script>");
+    expect(root.querySelector(".spell-duration-row script")).toBeNull();
+    expect(root.textContent).toContain("Advisory: sustained effect");
+    const reconcile = root.querySelector("button[data-audit-reconcile]")!;
+    reconcile.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(api.__test.runtime.queue.size).toBe(1);
+    const id = api.__test.runtime.queue.keys().next().value;
+    const approvalRoot = app._renderHTML();
+    const approvalDetails = approvalRoot.querySelector(".request pre")?.textContent ?? "";
+    expect(approvalDetails).toContain("condition-created");
+    expect(approvalDetails).not.toContain("private-review-token");
+    await app.approve(id);
+    expect(socket.send).not.toHaveBeenCalled();
+    expect(api.__test.runtime.queue.size).toBe(0);
+    dom.window.close();
+    vi.stubGlobal("document", priorDocument);
+  });
+
   it("ignores a local audit read that completes after the paired socket changes", async () => {
     game.system = { id: "pf2e", version: "8.7.0" };
     game.settings = { get: vi.fn(() => undefined) };
@@ -281,6 +342,52 @@ describe("Foundry write operations", () => {
     expect(callback).not.toHaveBeenCalled();
     expect(api.__test.runtime.spellHistoryEntries).toEqual([]);
     expect(socket.send).not.toHaveBeenCalled();
+  });
+
+  it("clears duration selection and ignores a duration read after session disconnect", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => undefined) };
+    api.__test.runtime.spellDurationTargetUuid = "Actor.target";
+    api.__test.runtime.spellDurationEntries = [{ uuid: "Actor.target.Item.effect" }];
+    const callback = vi.fn();
+    api.__test.submitLocalTool("pf2e_inspect_spell_durations", { targetUuid: "Actor.target", offset: 0, limit: 10 }, callback);
+    api.__test.runtime.socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
+    api.__test.runtime.sessionId = "new-session";
+    await vi.waitFor(() => expect(api.__test.runtime.spellAuditSessionKey).toBeUndefined());
+    expect(callback).not.toHaveBeenCalled();
+    expect(api.__test.runtime.spellDurationEntries).toEqual([]);
+    expect(api.__test.runtime.spellDurationTargetUuid).toBe("");
+    expect(socket.send).not.toHaveBeenCalled();
+  });
+
+  it("does not display a deferred duration result under a different same-session target", async () => {
+    game.system = { id: "pf2e", version: "8.7.0" };
+    game.settings = { get: vi.fn(() => true) };
+    const actor: any = { id: "a", uuid: "Actor.a", documentName: "Actor", type: "character", name: "A", parent: null,
+      items: new Map(), itemTypes: { effect: [{ id: "effect", uuid: "Actor.a.Item.effect", type: "effect", name: "Observed A",
+        system: { duration: { unit: "unlimited", value: -1, sustained: true } } }] }, conditions: { contents: [] } };
+    game.actors = new Map([[actor.id, actor]]);
+    let releaseLookup!: (value: any) => void;
+    const lookup = vi.fn(() => new Promise((resolve) => { releaseLookup = resolve; }));
+    vi.stubGlobal("fromUuid", lookup);
+    api.__test.runtime.spellDurationTargetUuid = actor.uuid;
+    api.__test.runtime.spellDurationEntries = [];
+    const dom = new JSDOM("<!doctype html><html><body></body></html>");
+    const priorDocument = (globalThis as any).document;
+    vi.stubGlobal("document", dom.window.document);
+    const root = new api.__test.BridgeApp()._renderHTML();
+    api.__test.refreshSpellDurations(actor.uuid);
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalledWith(actor.uuid));
+    const targetInput = root.querySelector('[name="spell-duration-target"]') as HTMLInputElement;
+    targetInput.value = "Actor.b";
+    targetInput.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+    expect(api.__test.runtime.spellDurationEntries).toEqual([]);
+    releaseLookup(actor);
+    await vi.waitFor(() => expect(api.__test.runtime.spellAuditBusy).toBe(false));
+    expect(api.__test.runtime.spellDurationTargetUuid).toBe("Actor.b");
+    expect(api.__test.runtime.spellDurationEntries).toEqual([]);
+    dom.window.close();
+    vi.stubGlobal("document", priorDocument);
   });
 
   it("disconnect resets automatic mode and session identity", () => {

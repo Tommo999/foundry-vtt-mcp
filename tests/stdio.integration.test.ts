@@ -140,7 +140,7 @@ describe("companion MCP stdio integration", () => {
       "pf2e_roll_spell_damage",
     ])
       expect(result.tools.map((tool) => tool.name)).toContain(name);
-    expect(result.tools).toHaveLength(63);
+    expect(result.tools).toHaveLength(66);
     const spellPreview = result.tools.find(
       (tool) => tool.name === "pf2e_inspect_spell_resolution",
     );

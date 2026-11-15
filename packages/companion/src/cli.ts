@@ -117,11 +117,17 @@ function toolDescription(name: string): string {
     pf2e_roll_spell_damage:
       "Roll native base damage for the exact previewed cast using PF2e's damage pipeline and explicit target context where the spell is an attack. Requires GM approval, a current resolutionId/reviewToken and exact expectedCombat. Does not scale by saves/critical outcomes or apply HP; inspect chat and audit status before retrying any uncertain result.",
     pf2e_inspect_spell_history:
-      "Read bounded spell cast and resolution audit history with optional Actor, kind and original/effective status filters. Returns primitive audit facts only; does not inspect full Actor or chat sources and performs no writes.",
+      "Read bounded spell cast, resolution and effect audit history with optional Actor, kind and original/effective status filters. Returns primitive audit facts only; does not inspect full Actor or chat sources and performs no writes.",
     pf2e_inspect_spell_reconciliation:
-      "Inspect one reserved or uncertain spell audit record and its current native evidence. Returns missing or contradictory evidence and, only when strict predicates pass, a short-lived review for confirmed-observed or refused-unchanged reconciliation. Read-only; does not replay native actions or modify source records.",
+      "Inspect one reserved or uncertain cast, resolution, or native effect outcome and its current evidence. Returns a bounded observed effect summary for effect recovery, with full native sources kept private. Only strict confirmed-observed evidence gets a short-lived review. Read-only; does not replay native actions or modify source records.",
     pf2e_reconcile_spell_audit:
       "Append one approved, evidence-bound spell audit reconciliation using the exact unexpired reconciliationId and reviewToken. Original cast/resolution records remain unchanged; no refund, replay, deletion or forced status is available. Inspect the ledger before any follow-up after an uncertain append.",
+    pf2e_inspect_spell_effect:
+      "Preview a GM-selected PF2e compendium effect or native condition for one explicit target of a bridge-confirmed cast. The selection is not inferred from spell rules. Returns exact native source, expected operation, duplicate status, expected combat and a short-lived review binding. Read-only; does not apply the effect or change a condition.",
+    pf2e_inspect_spell_durations:
+      "Read bounded native effect and condition duration, remaining, expiry, start, sustained and provenance facts for an explicit current Actor or token. Unknown native facts remain null. Sustain reminders are advisory; this tool does not spend actions, schedule changes, extend durations or write world state.",
+    pf2e_apply_spell_effect:
+      "Apply the exact previously reviewed native PF2e effect or condition to the same explicit target using its applicationId, reviewToken and expectedCombat. Requires GM approval unless session auto-writes are enabled. Native hooks may create grant items; inspect audit status before retrying any uncertain result. No rollback or replay is attempted.",
     pf2e_roll_initiative:
       "Roll PF2e initiative for selected encounter combatants using each actor's configured initiative statistic (including Stealth if configured). Skips combatants with existing initiative unless reroll is true. Uses native PF2e rolls and tracker updates; messageMode defaults to GM-only. Requires GM approval and must not be automatically retried.",
     start_encounter:

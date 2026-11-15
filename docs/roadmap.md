@@ -8,7 +8,7 @@ Status recorded 2026-11-16. Releases follow acceptance gates rather than promise
 | --- | --- | --- | --- |
 | v0.11 | Native spell resolution | Published; matching-build live acceptance pending | Resolve a confirmed cast with native spell attacks, saves and base damage. |
 | v0.12 | Spell history and evidence-bound recovery | Published; assets anonymously verified; matching-build live acceptance pending | Inspect what happened after an interrupted operation and reconcile supported outcomes without replaying gameplay. |
-| v0.13 | Reviewed spell effects and duration visibility | Approved implementation scope; design settled | Apply an explicitly selected native effect or condition from a confirmed cast, then inspect duration and sustain reminders. |
+| v0.13 | Reviewed spell effects and duration visibility | Implementation validated; matching-build live acceptance pending; see validation record for publication status | Apply an explicitly selected native effect or condition from a confirmed cast, then inspect duration and sustain reminders. |
 | v0.14 | Consumables and item spellcasting | Planned; native API investigation required | Use supported potions, scrolls, wands and other eligible items with explicit previews and native resource consumption. |
 | v0.15 | Rest, recovery and session readiness | Planned; native API investigation required | Review supported party recovery workflows and see what still needs GM attention before the next encounter or session. |
 
@@ -38,13 +38,13 @@ Example: “Inspect this interrupted cast. If the native card and durable resour
 
 Source commit `4d03347a30fdfe5de81b4e176ae0ed920b44f5c7` passed local validation: **405 tests across 43 files**, mandatory PowerShell checks, type checking, builds and standard/Windows packaging. [Hosted CI](https://github.com/Tommo999/foundry-vtt-mcp/actions/runs/43719397451) passed Linux and Windows jobs. The four draft assets were downloaded and verified against the immutable local candidate before publication; the published assets were then downloaded anonymously and verified against the same candidate.
 
-The [v0.12.0 public release](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.12.0) is published and marked latest. Matching-build live acceptance remains a separate pending gate. See [operator guide](spell-history-recovery.md), [design](v0.12-spell-history-recovery-design.md), and [validation](validation-v0.12.0.md).
+The [v0.12.0 public release](https://github.com/Tommo999/foundry-vtt-mcp-releases/releases/tag/v0.12.0) is published. Matching-build live acceptance remains a separate pending gate. See [operator guide](spell-history-recovery.md), [design](v0.12-spell-history-recovery-design.md), and [validation](validation-v0.12.0.md).
 
 ## v0.13 — spell effects, durations and sustain reminders
 
 ### Scope
 
-- Three planned tools: `pf2e_inspect_spell_effect`, approved `pf2e_apply_spell_effect`, and `pf2e_inspect_spell_durations`; target **66 tools** in total.
+- Three tools: `pf2e_inspect_spell_effect`, approved `pf2e_apply_spell_effect`, and `pf2e_inspect_spell_durations`; **66 tools** in the contract.
 - Bind application to one confirmed cast card, explicit caster/target tokens and an operator-selected compendium effect or native condition/value.
 - Preserve native effect rules, grants, origin context, duration and start-time handling. Condition changes use supported native APIs and preserve native provenance.
 - Audit native creation, increases and already-satisfied outcomes with durable semantic duplicate protection and evidence-bound recovery.
@@ -56,7 +56,7 @@ Example: “Preview applying this selected spell effect to the fighter, approve 
 
 Do not infer effects from spell text or degree of success. Do not spend spell resources again, lower/remove conditions through this application workflow, apply HP, extend durations or advance time. A sustain reminder does not claim an action was spent.
 
-Require source-shaped effect/condition/grant tests, correct native provenance and duration behavior, stale-review and uncertain-write coverage, history/recovery integration, UI approval tests, full validation and verified release assets. Live acceptance must use matching builds. The [settled design](v0.13-native-spell-effects-design.md) defines the detailed contract.
+The v0.13 implementation follows these boundaries and has source-shaped coverage. Local validation, package verification, publication status and matching-build live acceptance are recorded in [v0.13 validation](validation-v0.13.0.md). The [settled design](v0.13-native-spell-effects-design.md) defines the detailed contract.
 
 ## v0.14 — consumables and item spellcasting
 
