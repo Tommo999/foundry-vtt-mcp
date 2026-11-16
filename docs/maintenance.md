@@ -2,12 +2,33 @@
 
 This guide describes how to change the repository without losing its MCP contract, Foundry safety checks or Windows setup. The Windows setup archive includes maintainer guides but remains an installation subset: test trees and historical campaign reports are excluded. Use a full source checkout to follow links to tests or historical/live evidence.
 
+For a focused starting point, use the [tool ownership guide](tool-change-guide.md), [PF2e change guide](pf2e-change-guide.md), or [transport change guide](transport-change-guide.md).
+
 ## Before changing code
 
-1. Read the root [`AGENTS.md`](../AGENTS.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md), relevant handler/tests, [`architecture.md`](architecture.md), [security notes](security.md), [installation guide](installation.md), [acceptance checklist](acceptance-checklist.md), and current release/retest report.
+1. Read the root [`AGENTS.md`](../AGENTS.md), the matching task guide linked above, and the relevant owner and tests. Read [architecture](architecture.md) for cross-layer or boundary changes; [security](security.md) before changing authorization, native writes, TLS/origin checks or uncertain outcomes; [installation](installation.md) for setup or packaging changes; and the [acceptance checklist](acceptance-checklist.md) plus [current validation record](validation-v0.13.0.md) for live or release work. Historical reports are needed only when changing or verifying that specific release evidence.
 2. Inspect the working tree and preserve other edits. Keep one defined task in progress at a time. The main agent settles scope and plan before the single configured coder agent implements; the main agent reviews before the next workstream.
 3. Identify which layers own the behavior: shared schema, CLI description, daemon transport, module dispatch, native handler, unit/integration tests and user docs.
 4. Decide what evidence is required. Unit tests verify implementation behavior; Foundry live checks are separate and cannot be replaced by mocks or a successful build.
+
+### Behavior, owner and tests
+
+Use this map to find the smallest relevant change path. Start with the focused test, then follow its production owner and contract dependencies.
+
+| Behavior | Primary owner | Useful tests |
+| --- | --- | --- |
+| Tool schema, read/write classification and MCP discovery | `packages/shared/src/index.ts`, `packages/companion/src/cli.ts` | `tests/shared.test.ts`, `tests/stdio.integration.test.ts` |
+| Pairing, authenticated transport, request lifecycle and disconnects | `packages/companion/src/daemon.ts`, `packages/module/src/main.ts` | `packages/companion/test/daemon.test.ts`, `packages/module/tests/companion-pairing.test.ts`, `tests/stdio.integration.test.ts` |
+| Approval, session checks and general Foundry document operations | `packages/module/src/main.ts`, `packages/module/src/security.ts` | `packages/module/tests/v08-integration.test.ts`, `packages/module/tests/security.test.ts`, `packages/module/tests/operations.test.ts`, `packages/module/tests/journal-sanitization.test.ts` |
+| Encounter preparation, combat controls and snapshots | `packages/module/src/encounters.ts`, `packages/module/src/session-snapshot.ts` | `packages/module/tests/encounters.test.ts`, `packages/module/tests/session-snapshot.test.ts` |
+| PF2e reads, imports, conditions and inventory | `packages/module/src/pf2e.ts`, `pf2e-writes.ts`, `pf2e-conditions.ts`, `pf2e-inventory.ts` | `packages/module/tests/pf2e-read.test.ts`, `pf2e-writes.test.ts`, `pf2e-conditions.test.ts`, `pf2e-inventory.test.ts` |
+| PF2e checks, combat, strikes and damage | `packages/module/src/pf2e-checks.ts`, `pf2e-combat-context.ts`, `pf2e-strikes.ts`, `pf2e-damage-context.ts`, `pf2e-damage-application.ts` | Matching `pf2e-checks`, `pf2e-combat-context`, `pf2e-strikes`, `pf2e-damage-context`, `pf2e-damage-application` and `pf2e-damage-workflow` tests |
+| PF2e spell casts and resources | `packages/module/src/pf2e-spell-cast.ts`, `pf2e-spellcasting.ts`, `pf2e-spell-ledger.ts` | `packages/module/tests/pf2e-spell-cast.test.ts`, `pf2e-spellcasting.test.ts`, `pf2e-spell-ledger.test.ts` |
+| PF2e spell resolutions | `packages/module/src/pf2e-spell-resolution.ts`, `pf2e-spell-resolution-ledger.ts` | `packages/module/tests/pf2e-spell-resolution.test.ts`, `pf2e-spell-resolution-ledger.test.ts` |
+| PF2e spell effects, durations and recovery | `packages/module/src/pf2e-spell-effect.ts`, `pf2e-spell-effect-ledger.ts`, `pf2e-spell-audit.ts`, `pf2e-spell-reconciliation-ledger.ts` | `packages/module/tests/pf2e-spell-effect.test.ts`, `pf2e-spell-effect-ledger.test.ts`, `pf2e-spell-audit.test.ts`, `pf2e-spell-reconciliation-ledger.test.ts` |
+| Windows setup and source/archive packaging | `scripts/windows-setup-helper.mjs`, `scripts/setup-windows.ps1`, `scripts/package-windows.mjs`, `scripts/prepare-release.mjs` | `tests/windows-setup-helper.test.ts`, `tests/windows-powershell.test.mjs`, `tests/windows-package.test.mjs`, `tests/release.test.mjs`, `tests/release-publication.test.mjs` |
+
+For a new tool, also update `docs/tool-reference.md` and `docs/acceptance-checklist.md`. For live acceptance, use the checklist separately from fixture tests; current version status is in [validation-v0.13.0.md](validation-v0.13.0.md).
 
 ## Adding or changing a tool
 
@@ -54,8 +75,6 @@ Run `npm ci`, focused tests, `npm test`, `npm run typecheck`, `npm run package`,
 
 Build/package success does not update an installed Foundry module, running companion daemon or existing MCP client. Before marking a live bug fixed, deploy the exact build, verify both module and server versions, refresh/reconnect the GM browser and MCP client, then run the targeted live checklist. Record any unavailable live checks as pending with the concrete blocker. Keep old reports as history and write a new dated retest report/call log.
 
-## Last recorded release evidence
+## Current validation status
 
-As last recorded on 2026-11-07, release 0.8.1 exposes 51 tools; 219 tests across 30 files passed, with type checking and standard/Windows archive checks. The patched v0.8.1 live acceptance checks remained pending deployment to the Foundry GM browser. See the [release notes](release-v0.8.1.md) and [live retest report](live-retest-v0.8.1-2026-11-07.md). These dated figures are historical evidence, not a live check of a later checkout.
-
-The subsequent [2026-11-09 v0.8.1 live retest](live-retest-v0.8.1-2026-11-09.md) records the targeted fixes passing on Foundry 14.363 / PF2e 8.7.0. Current v0.8.2 integration evidence is tracked separately in [its validation record](validation-v0.8.2.md). Neither record establishes live compatibility for a newer build.
+See [v0.13.0 validation](validation-v0.13.0.md) for the current release's source checks, published-asset evidence and live acceptance status. Earlier release and live-retest reports are historical records for those builds only.

@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -40,6 +41,9 @@ describe("Windows setup source bundle allowlist", () => {
       "CONTRIBUTING.md",
       "docs/architecture.md",
       "docs/maintenance.md",
+      "docs/tool-change-guide.md",
+      "docs/pf2e-change-guide.md",
+      "docs/transport-change-guide.md",
       "docs/public-releases.md",
       "docs/spellcasting.md",
       "scripts/prepare-release.mjs",
@@ -62,6 +66,49 @@ describe("Windows setup source bundle allowlist", () => {
       "config.json",
     ])
       expect(files).not.toContain(excluded);
+  });
+
+  it("recursively includes only regular TypeScript source files in approved roots", () => {
+    const root = mkdtempSync(join(os.tmpdir(), "foundry-windows-source-test-"));
+    temporaryRoots.push(root);
+    const source = join(root, "packages", "module", "src");
+    const nested = join(source, "handlers", "spell");
+    mkdirSync(nested, { recursive: true });
+    mkdirSync(join(source, "assets"), { recursive: true });
+    mkdirSync(join(root, "packages", "other", "src"), { recursive: true });
+    writeFileSync(join(nested, "cast.ts"), "export {};\n");
+    writeFileSync(join(source, "assets", "image.png"), "image");
+    writeFileSync(join(root, "packages", "other", "src", "other.ts"), "export {};\n");
+
+    const first = collectSetupFiles(root);
+    const second = collectSetupFiles(root);
+
+    expect(first).toEqual(second);
+    expect(first).toContain("packages/module/src/handlers/spell/cast.ts");
+    expect(first).not.toContain("packages/module/src/assets/image.png");
+    expect(first).not.toContain("packages/other/src/other.ts");
+    expect(new Set(first).size).toBe(first.length);
+  });
+
+  it("does not follow symlinked source files or directories", () => {
+    const root = mkdtempSync(join(os.tmpdir(), "foundry-windows-symlink-test-"));
+    temporaryRoots.push(root);
+    const source = join(root, "packages", "module", "src");
+    const outside = join(root, "outside");
+    mkdirSync(source, { recursive: true });
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, "secret.ts"), "export {};\n");
+    try {
+      symlinkSync(join(outside, "secret.ts"), join(source, "linked.ts"));
+      symlinkSync(outside, join(source, "linked-directory"), "dir");
+    } catch (error) {
+      if (process.platform === "win32") return;
+      throw error;
+    }
+
+    const files = collectSetupFiles(root);
+    expect(files).not.toContain("packages/module/src/linked.ts");
+    expect(files).not.toContain("packages/module/src/linked-directory/secret.ts");
   });
 
   it("checks all required inputs before replacing an existing archive", () => {

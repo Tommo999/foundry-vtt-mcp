@@ -1,3 +1,4 @@
+import { canonicalSpellFingerprintValue, digestSpellFingerprint } from "./pf2e-spell-fingerprint";
 import type { ToolName } from "@foundry-mcp/shared";
 import type { PF2eContext } from "./pf2e-context";
 import { requirePF2e } from "./pf2e";
@@ -56,15 +57,13 @@ function currentActorForToken(actor: any, token: any, ctx: PF2eContext): boolean
   return token?.actor === actor && (actor.parent === token || actor.token === token || actor.token?.document === token);
 }
 function canonical(value: any): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+  return canonicalSpellFingerprintValue(value);
 }
 async function digest(value: unknown): Promise<string> {
-  const subtle = globalThis.crypto?.subtle;
-  if (!subtle) throw fail("CRYPTO_UNAVAILABLE", "Secure spell audit review fingerprints are unavailable.");
-  const result = await subtle.digest("SHA-256", new TextEncoder().encode(canonical(value)));
-  return Array.from(new Uint8Array(result), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return digestSpellFingerprint(
+    value,
+    "Secure spell audit review fingerprints are unavailable.",
+  );
 }
 function nonce(prefix: string): string {
   const api = globalThis.crypto;

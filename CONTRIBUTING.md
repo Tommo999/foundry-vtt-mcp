@@ -14,6 +14,8 @@ npm ci
 
 Run all commands from the checkout root unless a command says otherwise. The packages use npm workspaces; install dependencies at the root rather than independently in each package.
 
+For implementation navigation, start with the [tool ownership guide](docs/tool-change-guide.md), [PF2e change guide](docs/pf2e-change-guide.md), or [transport change guide](docs/transport-change-guide.md). The [maintenance guide](docs/maintenance.md) links to the authoritative safety and acceptance requirements.
+
 ## Tests and checks
 
 Run one or more focused tests directly with Vitest:
@@ -96,4 +98,4 @@ Live acceptance: <passed with environment/version, pending with blocker, or not 
 
 ## Current validation record
 
-As last recorded on 2026-11-07, release 0.8.1 has 51 tools and passed 219 tests across 30 files, type checking, and standard/Windows archive checks. The v0.8.1 targeted live retest remains pending because the updated module and companion were not verified in the Foundry GM browser. These are recorded results, not a fresh check of your current checkout; see the [live retest report](docs/live-retest-v0.8.1-2026-11-07.md).
+The current versioned source-check, published-asset, and live-acceptance status is recorded in [v0.13.0 validation](docs/validation-v0.13.0.md). Historical release and retest reports remain available for their original evidence; they do not establish validation for the current checkout.

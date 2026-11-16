@@ -46,6 +46,7 @@ describe("preparation and asset tools", () => {
   beforeEach(() => {
     socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
     api.__test.runtime.socket = socket;
+    api.__test.runtime.sessionId = "preparation-test-session";
     api.__test.runtime.worldId = "w";
     api.__test.runtime.userId = "gm";
     api.__test.runtime.autoWrites = true;

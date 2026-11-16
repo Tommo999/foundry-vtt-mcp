@@ -32,6 +32,9 @@ const fixedFiles = [
   "docs/release-v0.13.0.md",
   "docs/architecture.md",
   "docs/maintenance.md",
+  "docs/tool-change-guide.md",
+  "docs/pf2e-change-guide.md",
+  "docs/transport-change-guide.md",
   "docs/windows-setup.md",
   "docs/acceptance-checklist.md",
   "docs/security.md",
@@ -58,21 +61,41 @@ const fixedFiles = [
   "packages/companion/tsup.config.ts",
 ];
 
+const sourceRoots = [
+  "packages/shared/src",
+  "packages/module/src",
+  "packages/companion/src",
+];
+
+function collectTypeScriptFiles(directory, sourceRoot, relativeDirectory = "") {
+  const files = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  )) {
+    const relativePath = relativeDirectory
+      ? `${relativeDirectory}/${entry.name}`
+      : entry.name;
+    if (entry.isDirectory()) {
+      files.push(
+        ...collectTypeScriptFiles(
+          join(directory, entry.name),
+          sourceRoot,
+          relativePath,
+        ),
+      );
+    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+      files.push(`${sourceRoot}/${relativePath}`);
+    }
+  }
+  return files;
+}
+
 function collectSetupFiles(projectRoot = root) {
   const entries = [...fixedFiles];
-  for (const sourceRoot of [
-    "packages/shared/src",
-    "packages/module/src",
-    "packages/companion/src",
-  ]) {
+  for (const sourceRoot of sourceRoots) {
     const absolute = join(projectRoot, sourceRoot);
     if (!existsSync(absolute)) continue;
-    entries.push(
-      ...readdirSync(absolute)
-        .filter((name) => name.endsWith(".ts"))
-        .sort()
-        .map((name) => `${sourceRoot}/${name}`),
-    );
+    entries.push(...collectTypeScriptFiles(absolute, sourceRoot));
   }
   return [...new Set(entries)].sort();
 }

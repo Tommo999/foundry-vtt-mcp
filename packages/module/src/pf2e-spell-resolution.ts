@@ -1,3 +1,4 @@
+import { canonicalSpellFingerprintValue, digestSpellFingerprint } from "./pf2e-spell-fingerprint";
 import type { PF2eContext } from "./pf2e-context";
 import { requirePF2e } from "./pf2e";
 import { withCombatLock } from "./encounters";
@@ -37,6 +38,113 @@ type CombatSnapshot = {
   turn: number;
   combatantUuid: string;
 };
+type ResolutionSourceFacts = {
+  castRecord: SpellCastRecord;
+  message: unknown;
+  sceneUuid: unknown;
+  scene: unknown;
+  caster: unknown;
+  actor: unknown;
+  entry: unknown;
+  spell: unknown;
+  rankSpell: unknown;
+  nativeRank: unknown;
+  isAttack: unknown;
+  damageKinds: unknown[];
+  damage: unknown;
+  entryDc: unknown;
+  entryAttackModifier: unknown;
+  spellcastingCheckModifier: unknown;
+  targetSaveModifier: unknown;
+  casterLevel: unknown;
+  targetLevel: unknown;
+  nativeDc: unknown;
+  targetUuid: unknown;
+  target: unknown;
+  targetActorUuid: unknown;
+  targetActor: unknown;
+  rank: number;
+  saveStatistic: string | null;
+  dc: number | null;
+  expectedCombat: CombatSnapshot | null;
+  targetIndependentDamage: boolean;
+  rollClassName: string;
+};
+type ResolutionPreview = {
+  resolutionId: string;
+  reviewToken: string;
+  expiresAt: string;
+  selection: Selection;
+  expectedCombat: CombatSnapshot | null;
+  caster: { tokenUuid: string; actorUuid: string };
+  target: { tokenUuid: string; actorUuid: string };
+  cast: {
+    castId: string;
+    messageUuid: string | null;
+    spellUuid: string;
+    entryUuid: string;
+    rank: number;
+  };
+  native: {
+    attackNumber: number | null;
+    saveStatistic: string | null;
+    dc: number | null;
+    spellcastingCheckModifier: unknown;
+    targetSaveModifier: unknown;
+    targetIndependentDamage: boolean;
+    outcomeScaling: false;
+  };
+  ledger: { capacityRemaining: number };
+  readOnly: true;
+  executesNothing: true;
+};
+type DegreeOfSuccess =
+  | "criticalFailure"
+  | "failure"
+  | "success"
+  | "criticalSuccess";
+type ConfirmedResolutionAuditOutcome = {
+  messageUuid: string;
+  rollType: "check" | "damage";
+  rollTotal: number;
+};
+type ConfirmedResolutionResponse = {
+  resolution: "confirmed";
+  resolutionId: string;
+  action: ResolutionAction;
+  castMessageUuid: string;
+  messageUuid: string;
+  rollType: "check" | "damage";
+  total: number;
+  degreeOfSuccess: DegreeOfSuccess | null;
+  casterTokenUuid: string;
+  targetTokenUuid: string;
+  rank: number;
+  attackNumber: number | null;
+  saveStatistic: string | null;
+  dc: number | null;
+  targetIndependentDamage: boolean;
+  outcomeScaling: false;
+};
+type ConfirmedResolutionExecution = ConfirmedResolutionResponse & {
+  __auditOutcome: ConfirmedResolutionAuditOutcome;
+};
+type ResolutionUncertainPartial = {
+  resolutionId: string;
+  messageUuid: string | null;
+  rollType: "check" | "damage" | null;
+  rollTotal: number | null;
+  causeCode: unknown;
+};
+type ResolutionAuditFailurePartial = {
+  resolutionId: string;
+  messageUuid: unknown;
+  rollType: unknown;
+  rollTotal: unknown;
+  auditStatus: unknown;
+  auditStateKnown: boolean;
+  causeCode: unknown;
+};
 type ResolutionIntent = {
   resolutionId: string;
   reviewToken: string;
@@ -68,7 +176,7 @@ type Resolved = {
   dc: number | null;
   targetIndependentDamage: boolean;
   rollClass: any;
-  sourceFacts: unknown;
+  sourceFacts: ResolutionSourceFacts;
 };
 
 function fail(code: string, message: string, partial?: unknown): Error {
@@ -109,25 +217,13 @@ function sourceOf(doc: any): unknown {
   return null;
 }
 function canonical(value: any): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.keys(value)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`)
-    .join(",")}}`;
+  return canonicalSpellFingerprintValue(value);
 }
 async function digest(value: unknown): Promise<string> {
-  const api = globalThis.crypto;
-  if (!api?.subtle)
-    throw fail(
-      "CRYPTO_UNAVAILABLE",
-      "Secure spell-resolution review fingerprints are unavailable.",
-    );
-  const bytes = new TextEncoder().encode(canonical(value));
-  const hash = await api.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash), (x) =>
-    x.toString(16).padStart(2, "0"),
-  ).join("");
+  return digestSpellFingerprint(
+    value,
+    "Secure spell-resolution review fingerprints are unavailable.",
+  );
 }
 function nonce(prefix: string): string {
   const api = globalThis.crypto;
@@ -666,7 +762,10 @@ function speakerMatches(message: any, token: any, actor: any) {
     speaker?.actor === actor.id
   );
 }
-function currentFacts(resolved: Resolved, ctx: PF2eContext): unknown {
+function currentFacts(
+  resolved: Resolved,
+  ctx: PF2eContext,
+): ResolutionSourceFacts {
   const statistic = resolved.rankSpell.spellcasting?.statistic;
   return {
     castRecord: readConfirmedSpellCastByMessage(ctx, resolved.message.uuid),
@@ -703,7 +802,7 @@ function currentFacts(resolved: Resolved, ctx: PF2eContext): unknown {
     expectedCombat: resolved.expectedCombat,
     targetIndependentDamage: resolved.targetIndependentDamage,
     rollClassName: resolved.rollClass.name,
-  };
+  } satisfies ResolutionSourceFacts;
 }
 function assertResolvedCurrent(
   resolved: Resolved,
@@ -826,7 +925,10 @@ function hookMessage(
   };
 }
 
-async function inspectResolution(selection: Selection, ctx: PF2eContext) {
+async function inspectResolution(
+  selection: Selection,
+  ctx: PF2eContext,
+): Promise<ResolutionPreview> {
   const session = identity(ctx);
   const resolved = await resolveSelection(selection, ctx);
   const hash = await fingerprint(selection, resolved);
@@ -1126,7 +1228,7 @@ async function executeResolution(
   tool: Exclude<ResolutionTool, "pf2e_inspect_spell_resolution">,
   args: Record<string, unknown>,
   ctx: PF2eContext,
-) {
+): Promise<ConfirmedResolutionResponse> {
   const action =
     tool === "pf2e_roll_spell_attack"
       ? "attack"
@@ -1189,10 +1291,10 @@ async function executeResolution(
     fingerprint: intent.fingerprint,
   };
   await reserveSpellResolution(ctx, reservation);
-  const run = async () => {
+  const run = async (): Promise<ConfirmedResolutionExecution> => {
     let message: any = null,
       callbackMessage: any = null,
-      nativeOutcome: any = null,
+      nativeOutcome: unknown = null,
       roll: any = null,
       hookHandle: ReturnType<typeof hookMessage> | null = null;
     try {
@@ -1201,7 +1303,7 @@ async function executeResolution(
       hookHandle = hookMessage(ctx, intent, current, (candidate: any) => {
         message = candidate;
       });
-      const callback = (_roll: any, _outcome: any, nativeMessage: any) => {
+      const callback = (_roll: any, _outcome: unknown, nativeMessage: any) => {
         if (_outcome !== undefined) nativeOutcome = _outcome;
         if (nativeMessage) callbackMessage = nativeMessage;
       };
@@ -1282,21 +1384,20 @@ async function executeResolution(
       );
       recheckIntent(intent, ctx);
       ctx.assertWrite();
-      const degreeOfSuccess =
+      const degreeOfSuccess: DegreeOfSuccess | null =
         action === "damage"
           ? null
           : typeof nativeOutcome === "string" &&
-              [
-                "criticalFailure",
-                "failure",
-                "success",
-                "criticalSuccess",
-              ].includes(nativeOutcome)
+              (nativeOutcome === "criticalFailure" ||
+                nativeOutcome === "failure" ||
+                nativeOutcome === "success" ||
+                nativeOutcome === "criticalSuccess")
             ? nativeOutcome
-            : Number.isInteger(nativeOutcome) &&
+            : typeof nativeOutcome === "number" &&
+                Number.isInteger(nativeOutcome) &&
                 nativeOutcome >= 0 &&
                 nativeOutcome <= 3
-              ? ["criticalFailure", "failure", "success", "criticalSuccess"][
+              ? (["criticalFailure", "failure", "success", "criticalSuccess"] as const)[
                   nativeOutcome
                 ]
               : null;
@@ -1330,11 +1431,11 @@ async function executeResolution(
           rollType: roll ? (action === "damage" ? "damage" : "check") : null,
           rollTotal: finiteRoll(roll),
           causeCode: (cause as any)?.code ?? null,
-        },
+        } satisfies ResolutionUncertainPartial,
       );
     }
   };
-  let nativeResult: any;
+  let nativeResult: ConfirmedResolutionExecution;
   if (preview.expectedCombat) {
     const combat =
       ctx.game?.combats?.get?.(
@@ -1344,7 +1445,8 @@ async function executeResolution(
         (entry) => entry.uuid === preview.expectedCombat!.encounterUuid,
       );
     try {
-      if (!combat) throw fail("STALE_TURN", "The previewed encounter no longer exists.");
+      if (!combat)
+        throw fail("STALE_TURN", "The previewed encounter no longer exists.");
       nativeResult = await withCombatLock(combat, ctx, run);
     } catch (cause) {
       return finalizeResolutionUncertain(ctx, resolutionId, cause);
@@ -1369,7 +1471,7 @@ async function executeResolution(
       auditStatus: (cause as any)?.partial?.status ?? null,
       auditStateKnown: (cause as any)?.partial?.known === true,
       causeCode: (cause as any)?.code ?? null,
-    });
+    } satisfies ResolutionAuditFailurePartial);
   }
   return response;
 }
@@ -1390,7 +1492,7 @@ async function finalizeResolutionUncertain(
       resolutionId, messageUuid: partial.messageUuid ?? null, rollType: observed.rollType,
       rollTotal: observed.rollTotal, auditStatus: observed.status, auditStateKnown: true,
       causeCode: (cause as any)?.code ?? null,
-    });
+    } satisfies ResolutionAuditFailurePartial);
   } catch (auditError) {
     if ((auditError as any)?.code === "PARTIAL_FAILURE") throw auditError;
     throw fail("PARTIAL_FAILURE", "Native spell resolution may have occurred; inspect chat and spellResolutions before retrying.", {
@@ -1400,7 +1502,7 @@ async function finalizeResolutionUncertain(
       auditStatus: (auditError as any)?.partial?.status ?? null,
       auditStateKnown: (auditError as any)?.partial?.known === true,
       causeCode: (auditError as any)?.code ?? (cause as any)?.code ?? null,
-    });
+    } satisfies ResolutionAuditFailurePartial);
   }
 }
 

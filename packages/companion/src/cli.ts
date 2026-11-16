@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import companionPackage from "../package.json";
-import { diagnoseRuntimeVersions } from "@foundry-mcp/shared";
+import { diagnoseRuntimeVersions, type ToolName } from "@foundry-mcp/shared";
 import https from "node:https";
 import { fileURLToPath } from "node:url";
 import { CompanionDaemon, type CompanionConfig } from "./daemon.js";
@@ -84,8 +84,8 @@ export function withMcpVersions(result: any): any {
     },
   };
 }
-function toolDescription(name: string): string {
-  const descriptions: Record<string, string> = {
+function toolDescription(name: ToolName): string {
+  const descriptions: Record<ToolName, string> = {
     pf2e_combat_context:
       "Inspect the active PF2e encounter, current combatant, explicit scene targets, conditions, and prepared strike selectors. Read-only; supply the returned expected round, turn, and combatant to a subsequent strike or damage roll.",
     pf2e_roll_strike:
@@ -202,10 +202,16 @@ function toolDescription(name: string): string {
       "Remove explicitly selected combatant UUIDs from an unstarted preparation record. Requires GM approval; this is a scoped destructive operation.",
     session_snapshot:
       "Return a bounded factual snapshot of selected party, scene, encounter, and journal data for an agent to summarize. Read-only; the server does not generate a briefing.",
+    list_folders: "Foundry VTT list folders.",
+    get_status: "Foundry VTT get status.",
+    discover_types: "Foundry VTT discover types.",
+    search_world: "Foundry VTT search world.",
+    list_compendiums: "Foundry VTT list compendiums.",
+    search_compendium: "Foundry VTT search compendium.",
+    get_document: "Foundry VTT get document.",
+    create_document: "Foundry VTT create document.",
   };
-  const detail =
-    descriptions[name] ?? `Foundry VTT ${name.replaceAll("_", " ")}.`;
-  return `${detail} Read tools work without approval; write tools require GM approval or session auto-write. Writes are never automatically retried.`;
+  return `${descriptions[name]} Read tools work without approval; write tools require GM approval or session auto-write. Writes are never automatically retried.`;
 }
 
 async function main() {

@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { installBridgeTestBootstrap } from "./bridge-test-bootstrap";
 
 const mocks = vi.hoisted(() => ({ inspect: vi.fn(), apply: vi.fn() }));
 vi.mock("../src/pf2e-damage-context", () => ({
@@ -8,9 +9,6 @@ vi.mock("../src/pf2e-damage-application", () => ({
   handlePF2eApplyDamage: mocks.apply,
 }));
 
-class MockApplicationV2 {
-  render() {}
-}
 let game: any;
 let api: any;
 let socket: any;
@@ -26,37 +24,9 @@ const common = {
 const reviewToken = "a".repeat(64);
 
 beforeAll(async () => {
-  vi.stubGlobal("Hooks", {
-    once: vi.fn((name: string, callback: () => void) =>
-      hookCallbacks.set(name, callback),
-    ),
-    on: vi.fn(),
-  });
-  vi.stubGlobal("foundry", {
-    applications: { api: { ApplicationV2: MockApplicationV2 } },
-  });
-  vi.stubGlobal("ui", {});
-  vi.stubGlobal("window", {
-    setTimeout: (...args: any[]) => (globalThis.setTimeout as any)(...args),
-    clearTimeout: (timer: any) => globalThis.clearTimeout(timer),
-  });
-  vi.stubGlobal("fromUuid", vi.fn());
-  game = {
-    world: { id: "world-a", title: "Test" },
-    user: { id: "gm-a", isGM: true },
-    version: "14.0",
-    system: { id: "pf2e", version: "test" },
-    settings: { get: () => true },
-    pf2e: {},
-    scenes: new Map(),
-    combats: { documentClass: { prototype: {} } },
-    actors: new Map(),
-    items: new Map(),
-    journal: new Map(),
-    packs: new Map(),
-  };
-  vi.stubGlobal("game", game);
-  api = await import("../src/main");
+  ({ game, api } = await installBridgeTestBootstrap({
+    onHookOnce: (name, callback) => hookCallbacks.set(name, callback),
+  }));
 });
 
 beforeEach(() => {

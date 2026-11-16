@@ -1,3 +1,4 @@
+import { canonicalSpellFingerprintValue, digestSpellFingerprint } from "./pf2e-spell-fingerprint";
 import type { ToolName } from "@foundry-mcp/shared";
 import type { PF2eContext } from "./pf2e-context";
 import { requirePF2e } from "./pf2e";
@@ -48,6 +49,61 @@ type CastIntent = {
   expiresAt: number;
   used: boolean;
 };
+type CastSourceFacts = {
+  actor: unknown;
+  entry: unknown;
+  spell: unknown;
+  casterToken: {
+    uuid: string;
+    id: string;
+    sceneUuid: string;
+    actorUuid: string;
+    actorId: unknown;
+    actorLink: unknown;
+    source: unknown;
+  };
+  targets: Array<{
+    uuid: string;
+    id: string;
+    actorUuid: string | null;
+    actorId: unknown;
+    actorLink: unknown;
+    source: unknown;
+  }>;
+  option: {
+    groupId: unknown;
+    groupNumber: number;
+    rank: number;
+    slotId: number | null;
+    signature: boolean;
+    virtual: boolean;
+    expended: boolean;
+    resource: SpellCastResourceSnapshot;
+    dc: unknown;
+    attackModifier: unknown;
+    actorLevel: number | null;
+    time: unknown;
+    computedRank: number;
+  };
+};
+type ConfirmedCastOutcome = {
+  cast: "confirmed";
+  castId: string;
+  actorUuid: string;
+  casterTokenUuid: string;
+  entryUuid: string;
+  spellUuid: string;
+  rank: number;
+  slotId: number | null;
+  targetTokenUuids: string[];
+  messageMode: Selection["messageMode"];
+  expectedCombat: CombatSnapshot | null;
+  resourceBefore: SpellCastResourceSnapshot;
+  resourceAfter: SpellCastResourceSnapshot | null;
+  chatMessageUuid: string;
+  effectsApplied: false;
+  targetRollsResolved: false;
+};
 type Resolved = {
   scene: any;
   token: any;
@@ -60,7 +116,7 @@ type Resolved = {
   nativeGroupNumber: number;
   resource: SpellCastResourceSnapshot;
   expectedCombat: CombatSnapshot | null;
-  sourceFacts: unknown;
+  sourceFacts: CastSourceFacts;
   targetDocs: any[];
 };
 
@@ -107,25 +163,14 @@ function sourceOf(document: any): unknown {
   return null;
 }
 function canonical(value: any): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.keys(value)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`)
-    .join(",")}}`;
+  return canonicalSpellFingerprintValue(value);
 }
 async function digest(value: unknown): Promise<string> {
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi?.subtle || typeof TextEncoder === "undefined")
-    throw fail(
-      "CRYPTO_UNAVAILABLE",
-      "Secure spell-cast review fingerprints are unavailable in this runtime.",
-    );
-  const bytes = new TextEncoder().encode(canonical(value));
-  const hash = await cryptoApi.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+  return digestSpellFingerprint(
+    value,
+    "Secure spell-cast review fingerprints are unavailable in this runtime.",
+    true,
+  );
 }
 function nonce(prefix: string): string {
   const cryptoApi = globalThis.crypto;
@@ -1106,7 +1151,10 @@ function verifyCreatedMessage(
     );
   return uuid;
 }
-async function executeCast(args: Record<string, unknown>, ctx: PF2eContext) {
+async function executeCast(
+  args: Record<string, unknown>,
+  ctx: PF2eContext,
+): Promise<ConfirmedCastOutcome> {
   const selection = validateSelection(args);
   const castId = String(args.castId ?? "");
   const reviewToken = String(args.reviewToken ?? "");
@@ -1348,7 +1396,7 @@ async function executeCast(args: Record<string, unknown>, ctx: PF2eContext) {
           chatMessageUuid,
           effectsApplied: false,
           targetRollsResolved: false,
-        };
+        } satisfies ConfirmedCastOutcome;
       } catch (cause) {
         if (reserved && !finalizationAttempted) {
           finalizationAttempted = true;
